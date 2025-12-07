@@ -1,17 +1,164 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
-import { UserRole, CaseStatus, Case } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search } from 'lucide-react';
+import { UserRole, CaseStatus, Case, User, Notification } from '../types';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription } from '../services/geminiService';
 
+// --- SUB-COMPONENTS ---
+
+const UserProfile: React.FC = () => {
+  const { currentUser, updateProfile } = useApp();
+  const [formData, setFormData] = useState({
+    name: currentUser?.name || '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+    oab: currentUser?.oab || '',
+    bio: currentUser?.bio || '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfile(formData);
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto animate-in fade-in duration-500">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+           <div className="relative group">
+              <img src={currentUser?.avatar} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-slate-50 object-cover shadow-md" />
+              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                  <span className="text-white text-xs font-bold">Alterar</span>
+              </div>
+           </div>
+           <div className="text-center md:text-left">
+              <h2 className="text-2xl font-bold text-slate-900">{currentUser?.name}</h2>
+              <div className="flex items-center justify-center md:justify-start space-x-2 text-slate-500">
+                  <span className="capitalize">{currentUser?.role === 'LAWYER' ? 'Advogado' : currentUser?.role === 'CLIENT' ? 'Cliente' : 'Administrador'}</span>
+                  {currentUser?.verified && <Check className="w-4 h-4 text-green-500" />}
+              </div>
+           </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+               <label className="text-sm font-semibold text-slate-700">Nome Completo</label>
+               <div className="relative">
+                 <UserIcon className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                 <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" />
+               </div>
+            </div>
+            <div className="space-y-2">
+               <label className="text-sm font-semibold text-slate-700">Email</label>
+               <div className="relative">
+                 <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                 <input type="email" name="email" value={formData.email} onChange={handleChange} disabled className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed" />
+               </div>
+            </div>
+            <div className="space-y-2">
+               <label className="text-sm font-semibold text-slate-700">Telefone</label>
+               <div className="relative">
+                 <Phone className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                 <input type="text" name="phone" value={formData.phone} onChange={handleChange} placeholder="(00) 00000-0000" className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" />
+               </div>
+            </div>
+            {currentUser?.role === UserRole.LAWYER && (
+                <div className="space-y-2">
+                   <label className="text-sm font-semibold text-slate-700">OAB</label>
+                   <div className="relative">
+                     <Shield className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                     <input type="text" name="oab" value={formData.oab} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" />
+                   </div>
+                </div>
+            )}
+          </div>
+
+          {currentUser?.role === UserRole.LAWYER && (
+             <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Biografia Profissional</label>
+                <textarea name="bio" value={formData.bio} onChange={handleChange} rows={4} placeholder="Conte um pouco sobre sua experiência..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none" />
+             </div>
+          )}
+
+          <div className="pt-4 flex justify-end">
+            <button type="submit" className="flex items-center space-x-2 bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20">
+               <Save className="w-5 h-5" />
+               <span>Salvar Alterações</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const NotificationList: React.FC = () => {
+  const { notifications, currentUser, markNotificationAsRead } = useApp();
+  const myNotifications = notifications.filter(n => n.userId === currentUser?.id).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return (
+    <div className="max-w-3xl mx-auto animate-in fade-in duration-500">
+       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+            <h2 className="text-xl font-bold text-slate-900">Suas Notificações</h2>
+            <span className="text-xs font-medium text-slate-500">{myNotifications.filter(n => !n.read).length} não lidas</span>
+         </div>
+         <div className="divide-y divide-slate-100">
+            {myNotifications.length === 0 ? (
+                <div className="p-12 text-center">
+                    <Bell className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-500">Você não tem novas notificações.</p>
+                </div>
+            ) : (
+                myNotifications.map(n => (
+                    <div key={n.id} onClick={() => markNotificationAsRead(n.id)} className={`p-6 flex items-start space-x-4 hover:bg-slate-50 transition cursor-pointer ${!n.read ? 'bg-indigo-50/50' : ''}`}>
+                        <div className={`mt-1 p-2 rounded-full flex-shrink-0 ${
+                            n.type === 'success' ? 'bg-green-100 text-green-600' :
+                            n.type === 'warning' ? 'bg-yellow-100 text-yellow-600' :
+                            'bg-blue-100 text-blue-600'
+                        }`}>
+                           {n.type === 'success' ? <Check className="w-4 h-4"/> : n.type === 'warning' ? <AlertCircle className="w-4 h-4"/> : <Bell className="w-4 h-4"/>}
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                                <h3 className={`text-sm font-semibold ${!n.read ? 'text-slate-900' : 'text-slate-600'}`}>{n.title}</h3>
+                                <span className="text-xs text-slate-400 whitespace-nowrap ml-2">{new Date(n.timestamp).toLocaleDateString()}</span>
+                            </div>
+                            <p className={`text-sm mt-1 ${!n.read ? 'text-slate-800' : 'text-slate-500'}`}>{n.message}</p>
+                        </div>
+                        {!n.read && <div className="w-2 h-2 bg-indigo-600 rounded-full mt-2"></div>}
+                    </div>
+                ))
+            )}
+         </div>
+       </div>
+    </div>
+  );
+};
+
 // --- SHARED LAYOUT ---
-const DashboardLayout: React.FC<{ children: React.ReactNode; title: string; activeTab?: string; onTabChange?: (t: any) => void }> = ({ children, title }) => {
-  const { logout, currentUser } = useApp();
+
+type ViewType = 'dashboard' | 'profile' | 'notifications';
+
+const DashboardLayout: React.FC<{ 
+    children: React.ReactNode; 
+    title: string; 
+    activeView: ViewType;
+    onViewChange: (view: ViewType) => void; 
+}> = ({ children, title, activeView, onViewChange }) => {
+  const { logout, currentUser, notifications } = useApp();
+  const unreadCount = notifications.filter(n => n.userId === currentUser?.id && !n.read).length;
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col sticky top-0 h-screen shadow-xl">
+      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col sticky top-0 h-screen shadow-xl z-20">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center space-x-2 text-indigo-400">
             <Briefcase className="w-6 h-6" />
@@ -20,45 +167,86 @@ const DashboardLayout: React.FC<{ children: React.ReactNode; title: string; acti
         </div>
         <div className="p-6">
           <div className="flex items-center space-x-3 mb-8 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
-            <img src={currentUser?.avatar} alt="User" className="w-10 h-10 rounded-full border-2 border-indigo-500" />
+            <img src={currentUser?.avatar} alt="User" className="w-10 h-10 rounded-full border-2 border-indigo-500 object-cover" />
             <div className="overflow-hidden">
               <p className="font-medium text-sm truncate">{currentUser?.name}</p>
-              <p className="text-xs text-slate-400 capitalize">{currentUser?.role.toLowerCase()}</p>
+              <p className="text-xs text-slate-400 capitalize">{currentUser?.role === 'LAWYER' ? 'Advogado' : currentUser?.role === 'CLIENT' ? 'Cliente' : 'Admin'}</p>
             </div>
           </div>
           <nav className="space-y-2">
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">Menu</div>
-            <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-900/20 transition-all">
+            
+            <button 
+              onClick={() => onViewChange('dashboard')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${
+                  activeView === 'dashboard' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
               <Activity className="w-5 h-5" />
-              <span>Dashboard</span>
+              <span>Painel Geral</span>
             </button>
-            <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+
+            <button 
+              onClick={() => onViewChange('profile')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${
+                  activeView === 'profile' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
               <UserIcon className="w-5 h-5" />
-              <span>Perfil</span>
+              <span>Meu Perfil</span>
             </button>
-            <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
-              <Bell className="w-5 h-5" />
-              <span>Notificações</span>
+
+            <button 
+              onClick={() => onViewChange('notifications')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all justify-between group ${
+                  activeView === 'notifications' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                  <Bell className="w-5 h-5" />
+                  <span>Notificações</span>
+              </div>
+              {unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+              )}
             </button>
           </nav>
         </div>
         <div className="mt-auto p-6 border-t border-slate-800">
-          <button onClick={logout} className="flex items-center space-x-2 text-slate-400 hover:text-red-400 transition-colors">
+          <button onClick={logout} className="flex items-center space-x-2 text-slate-400 hover:text-red-400 transition-colors w-full">
             <LogOut className="w-5 h-5" />
-            <span>Sair</span>
+            <span>Sair do Sistema</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{title}</h1>
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-5 flex justify-between items-center sticky top-0 z-10">
+          <div>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                  {activeView === 'dashboard' ? title : activeView === 'profile' ? 'Meu Perfil' : 'Central de Notificações'}
+              </h1>
+              {activeView === 'dashboard' && <p className="text-sm text-slate-500">Visão geral das suas atividades hoje</p>}
+          </div>
           <div className="flex items-center space-x-4 md:hidden">
+             <button onClick={() => onViewChange('notifications')} className="relative p-2 text-slate-500">
+                 <Bell className="w-6 h-6" />
+                 {unreadCount > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+             </button>
              <button onClick={logout} className="text-sm font-medium text-slate-500">Sair</button>
           </div>
         </header>
-        {children}
+        
+        <div className="flex-1 overflow-y-auto p-8">
+            {children}
+        </div>
       </main>
     </div>
   );
@@ -67,6 +255,8 @@ const DashboardLayout: React.FC<{ children: React.ReactNode; title: string; acti
 // --- CLIENT DASHBOARD ---
 export const ClientDashboard = () => {
   const { cases, currentUser, createCase } = useApp();
+  const [activeView, setActiveView] = useState<ViewType>('dashboard');
+  
   const [showModal, setShowModal] = useState(false);
   const [activeCase, setActiveCase] = useState<Case | null>(null);
   
@@ -97,11 +287,10 @@ export const ClientDashboard = () => {
     setAiSuggestion(null);
   };
 
-  return (
-    <DashboardLayout title={`Olá, ${currentUser?.name.split(' ')[0]}`}>
-      
+  const renderDashboardContent = () => (
+    <>
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in slide-in-from-bottom-4 duration-500">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
            <div className="text-slate-500 text-sm font-medium mb-1">Casos Ativos</div>
            <div className="text-3xl font-bold text-slate-900">{myCases.filter(c => c.status === CaseStatus.ACTIVE).length}</div>
@@ -121,7 +310,7 @@ export const ClientDashboard = () => {
 
       {/* Case List */}
       <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Briefcase className="w-5 h-5 mr-2 text-indigo-600"/> Meus Casos</h2>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 animate-in slide-in-from-bottom-8 duration-700">
         {myCases.length === 0 ? (
           <div className="col-span-2 text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
              <div className="text-slate-400 mb-2">Você ainda não tem casos cadastrados</div>
@@ -166,6 +355,18 @@ export const ClientDashboard = () => {
           ))
         )}
       </div>
+    </>
+  );
+
+  return (
+    <DashboardLayout 
+        title={`Olá, ${currentUser?.name.split(' ')[0]}`}
+        activeView={activeView}
+        onViewChange={setActiveView}
+    >
+      {activeView === 'dashboard' && renderDashboardContent()}
+      {activeView === 'profile' && <UserProfile />}
+      {activeView === 'notifications' && <NotificationList />}
 
       {/* New Case Modal */}
       {showModal && (
@@ -226,7 +427,7 @@ export const ClientDashboard = () => {
              <Chat 
                 currentCase={activeCase} 
                 currentUser={currentUser!} 
-                otherPartyName={activeCase.lawyerId ? "Dr. Advogado" : "Sistema"} // In real app, find user name
+                otherPartyName={activeCase.lawyerId ? "Dr. Advogado" : "Sistema"} 
                 onClose={() => setActiveCase(null)}
              />
           </div>
@@ -239,6 +440,7 @@ export const ClientDashboard = () => {
 // --- LAWYER DASHBOARD ---
 export const LawyerDashboard = () => {
   const { cases, currentUser, acceptCase, users } = useApp();
+  const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [activeTab, setActiveTab] = useState<'feed' | 'my'>('feed');
   const [activeCase, setActiveCase] = useState<Case | null>(null);
 
@@ -267,11 +469,10 @@ export const LawyerDashboard = () => {
 
   const getClientName = (id: string) => users.find(u => u.id === id)?.name || "Cliente";
 
-  return (
-    <DashboardLayout title="Portal do Advogado">
-      
+  const renderDashboardContent = () => (
+    <>
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-in slide-in-from-bottom-4 duration-500">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
            <div className="flex items-center justify-between">
               <div>
@@ -325,7 +526,7 @@ export const LawyerDashboard = () => {
       </div>
 
       {/* Content */}
-      <div className="grid gap-6">
+      <div className="grid gap-6 animate-in slide-in-from-bottom-8 duration-700">
         {activeTab === 'feed' ? (
           availableCases.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
@@ -378,6 +579,18 @@ export const LawyerDashboard = () => {
           ))
         )}
       </div>
+    </>
+  );
+
+  return (
+    <DashboardLayout 
+        title="Portal do Advogado"
+        activeView={activeView}
+        onViewChange={setActiveView}
+    >
+      {activeView === 'dashboard' && renderDashboardContent()}
+      {activeView === 'profile' && <UserProfile />}
+      {activeView === 'notifications' && <NotificationList />}
 
        {/* Lawyer Chat Overlay */}
        {activeCase && (
@@ -400,13 +613,13 @@ export const LawyerDashboard = () => {
 // --- ADMIN DASHBOARD ---
 export const AdminDashboard = () => {
   const { users, verifyLawyer, cases } = useApp();
+  const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const pendingLawyers = users.filter(u => u.role === UserRole.LAWYER && !u.verified);
 
-  return (
-    <DashboardLayout title="Administração do Sistema">
-      
+  const renderDashboardContent = () => (
+    <>
       {/* Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 animate-in slide-in-from-bottom-4 duration-500">
         <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-lg">
            <div className="text-slate-400 mb-1 font-medium">Usuários Totais</div>
            <div className="text-4xl font-bold">{users.length}</div>
@@ -421,7 +634,7 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
         <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
           <h3 className="font-bold text-slate-900 text-lg">Advogados Aguardando Validação</h3>
           <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">{pendingLawyers.length} Pendentes</span>
@@ -457,6 +670,18 @@ export const AdminDashboard = () => {
           </div>
         )}
       </div>
+    </>
+  );
+
+  return (
+    <DashboardLayout 
+        title="Administração do Sistema"
+        activeView={activeView}
+        onViewChange={setActiveView}
+    >
+        {activeView === 'dashboard' && renderDashboardContent()}
+        {activeView === 'profile' && <UserProfile />}
+        {activeView === 'notifications' && <NotificationList />}
     </DashboardLayout>
   );
 };

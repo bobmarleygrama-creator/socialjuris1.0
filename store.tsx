@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Case, Message, UserRole, CaseStatus } from './types';
+import { User, Case, Message, UserRole, CaseStatus, Notification } from './types';
 
 // Mock Data
 const MOCK_USERS: User[] = [
   { id: '1', name: 'Admin System', email: 'admin@socialjuris.com', role: UserRole.ADMIN, avatar: 'https://picsum.photos/id/1/200/200', createdAt: new Date().toISOString() },
-  { id: '2', name: 'Dr. Roberto Silva', email: 'roberto@law.com', role: UserRole.LAWYER, verified: true, oab: 'SP-123456', specialties: ['Civil', 'Trabalhista'], avatar: 'https://picsum.photos/id/1025/200/200', createdAt: new Date().toISOString() },
-  { id: '3', name: 'Maria Oliveira', email: 'maria@client.com', role: UserRole.CLIENT, avatar: 'https://picsum.photos/id/1027/200/200', createdAt: new Date().toISOString() },
+  { id: '2', name: 'Dr. Roberto Silva', email: 'roberto@law.com', role: UserRole.LAWYER, verified: true, oab: 'SP-123456', specialties: ['Civil', 'Trabalhista'], bio: 'Especialista em causas trabalhistas com 10 anos de experiência.', avatar: 'https://picsum.photos/id/1025/200/200', createdAt: new Date().toISOString() },
+  { id: '3', name: 'Maria Oliveira', email: 'maria@client.com', role: UserRole.CLIENT, phone: '(11) 99999-8888', avatar: 'https://picsum.photos/id/1027/200/200', createdAt: new Date().toISOString() },
 ];
 
 const MOCK_CASES: Case[] = [
@@ -25,18 +25,26 @@ const MOCK_CASES: Case[] = [
   }
 ];
 
+const MOCK_NOTIFICATIONS: Notification[] = [
+  { id: 'n1', userId: '3', title: 'Boas-vindas', message: 'Bem-vindo ao SocialJuris! Complete seu perfil.', read: false, timestamp: new Date().toISOString(), type: 'info' },
+  { id: 'n2', userId: '2', title: 'Nova Oportunidade', message: 'Um novo caso em Direito do Consumidor está disponível.', read: false, timestamp: new Date().toISOString(), type: 'success' }
+];
+
 interface AppContextType {
   currentUser: User | null;
   users: User[];
   cases: Case[];
+  notifications: Notification[];
   login: (email: string, role: UserRole) => void;
   logout: () => void;
   register: (user: Omit<User, 'id' | 'createdAt' | 'avatar'>) => void;
+  updateProfile: (data: Partial<User>) => void;
   createCase: (data: { title: string; description: string; area: string }) => void;
   acceptCase: (caseId: string) => void;
   sendMessage: (caseId: string, content: string, type?: 'text' | 'image' | 'file') => void;
   verifyLawyer: (userId: string) => void;
   closeCase: (caseId: string, rating: number, comment: string) => void;
+  markNotificationAsRead: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -45,6 +53,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [cases, setCases] = useState<Case[]>(MOCK_CASES);
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
 
   const login = (email: string, role: UserRole) => {
     const user = users.find(u => u.email === email && u.role === role);
@@ -68,6 +77,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentUser(newUser);
   };
 
+  const updateProfile = (data: Partial<User>) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, ...data };
+    setCurrentUser(updatedUser);
+    setUsers(users.map(u => u.id === currentUser.id ? updatedUser : u));
+    alert("Perfil atualizado com sucesso!");
+  };
+
   const createCase = (data: { title: string; description: string; area: string }) => {
     if (!currentUser) return;
     const newCase: Case = {
@@ -89,6 +106,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const acceptCase = (caseId: string) => {
     if (!currentUser || currentUser.role !== UserRole.LAWYER) return;
+    
+    // Find client to notify
+    const targetCase = cases.find(c => c.id === caseId);
+    if(targetCase) {
+        const notif: Notification = {
+            id: Math.random().toString(),
+            userId: targetCase.clientId,
+            title: 'Advogado Aceitou',
+            message: `O Dr(a). ${currentUser.name} aceitou seu caso: ${targetCase.title}.`,
+            read: false,
+            timestamp: new Date().toISOString(),
+            type: 'success'
+        };
+        setNotifications([notif, ...notifications]);
+    }
+
     setCases(cases.map(c => {
       if (c.id === caseId) {
         return {
@@ -130,14 +163,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const verifyLawyer = (userId: string) => {
     setUsers(users.map(u => u.id === userId ? { ...u, verified: true } : u));
+    const notif: Notification = {
+        id: Math.random().toString(),
+        userId: userId,
+        title: 'Perfil Verificado',
+        message: 'Sua conta foi aprovada pela administração. Você já pode aceitar casos.',
+        read: false,
+        timestamp: new Date().toISOString(),
+        type: 'success'
+    };
+    setNotifications([notif, ...notifications]);
   };
 
   const closeCase = (caseId: string, rating: number, comment: string) => {
     setCases(cases.map(c => c.id === caseId ? { ...c, status: CaseStatus.CLOSED, feedback: { rating, comment } } : c));
   };
 
+  const markNotificationAsRead = (id: string) => {
+      setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
   return (
-    <AppContext.Provider value={{ currentUser, users, cases, login, logout, register, createCase, acceptCase, sendMessage, verifyLawyer, closeCase }}>
+    <AppContext.Provider value={{ currentUser, users, cases, notifications, login, logout, register, updateProfile, createCase, acceptCase, sendMessage, verifyLawyer, closeCase, markNotificationAsRead }}>
       {children}
     </AppContext.Provider>
   );

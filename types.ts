@@ -19,6 +19,8 @@ export interface User {
   verified?: boolean; // For lawyers
   oab?: string; // For lawyers
   specialties?: string[]; // For lawyers
+  phone?: string;
+  bio?: string;
   createdAt: string;
 }
 
@@ -45,6 +47,16 @@ export interface Case {
     rating: number;
     comment: string;
   };
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  read: boolean;
+  timestamp: string;
+  type: 'info' | 'success' | 'warning';
 }
 
 export interface DashboardStats {
