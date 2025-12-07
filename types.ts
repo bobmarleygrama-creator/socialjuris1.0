@@ -41,6 +41,8 @@ export interface Case {
   description: string;
   area: string;
   status: CaseStatus;
+  city?: string;
+  uf?: string;
   createdAt: string;
   messages: Message[];
   feedback?: {

@@ -11,7 +11,7 @@ interface AppContextType {
   logout: () => Promise<void>;
   register: (user: Omit<User, 'id' | 'createdAt' | 'avatar'>, password?: string) => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
-  createCase: (data: { title: string; description: string; area: string }) => Promise<void>;
+  createCase: (data: { title: string; description: string; area: string; city: string; uf: string }) => Promise<void>;
   acceptCase: (caseId: string) => Promise<void>;
   sendMessage: (caseId: string, content: string, type?: 'text' | 'image' | 'file') => Promise<void>;
   verifyLawyer: (userId: string) => Promise<void>;
@@ -120,6 +120,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         description: c.description,
         area: c.area,
         status: c.status as CaseStatus,
+        city: c.city,
+        uf: c.uf,
         createdAt: c.created_at,
         feedback: c.feedback_rating ? { rating: c.feedback_rating, comment: c.feedback_comment } : undefined,
         messages: (c.messages || []).map((m: any) => ({
@@ -210,7 +212,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             // Se não tem sessão, é porque o Supabase está aguardando confirmação de email
             alert("✅ Cadastro realizado com sucesso!\n\n⚠️ IMPORTANTE: Um email de confirmação foi enviado. Você precisa confirmar antes de entrar, ou desativar a opção 'Confirm Email' no seu painel Supabase.");
         } else {
-            alert("Cadastro realizado e login efetuado!");
+             // Força um fetch imediato para garantir que a UI atualize sem precisar de reload
+             await fetchUserProfile(authData.user.id);
         }
       }
     }
@@ -236,7 +239,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const createCase = async (data: { title: string; description: string; area: string }) => {
+  const createCase = async (data: { title: string; description: string; area: string; city: string; uf: string }) => {
     if (!currentUser) return;
     
     const { data: newCase, error } = await supabase
@@ -246,6 +249,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         title: data.title,
         description: data.description,
         area: data.area,
+        city: data.city,
+        uf: data.uf,
         status: 'OPEN'
       })
       .select()
@@ -256,10 +261,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await supabase.from('messages').insert({
         case_id: newCase.id,
         sender_id: currentUser.id, // Tecnicamente sistema, mas usamos ID válido para FK
-        content: `Caso criado em ${new Date().toLocaleDateString()}. Aguardando advogado.`,
+        content: `Caso criado em ${new Date().toLocaleDateString()} em ${data.city}/${data.uf}. Aguardando advogado.`,
         type: 'system'
       });
       fetchCases();
+    } else {
+        console.error("Erro ao criar caso:", error);
+        alert("Erro ao criar caso. Verifique se as colunas 'city' e 'uf' foram criadas no Supabase.");
     }
   };
 

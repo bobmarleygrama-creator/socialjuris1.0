@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription } from '../services/geminiService';
+
+// --- CONSTANTES ---
+const BRAZIL_STATES = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+];
 
 // --- SUB-COMPONENTS ---
 
@@ -262,6 +267,8 @@ export const ClientDashboard = () => {
   
   // Case Creation State
   const [description, setDescription] = useState('');
+  const [city, setCity] = useState('');
+  const [uf, setUf] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{ area: string; title: string; summary: string } | null>(null);
 
@@ -269,6 +276,10 @@ export const ClientDashboard = () => {
 
   const handleAnalyze = async () => {
     if (description.length < 10) return;
+    if (!city || !uf) {
+        alert("Por favor, preencha Cidade e UF.");
+        return;
+    }
     setAnalyzing(true);
     const result = await analyzeCaseDescription(description);
     setAiSuggestion(result);
@@ -280,10 +291,14 @@ export const ClientDashboard = () => {
     createCase({ 
       title: aiSuggestion.title, 
       description, 
-      area: aiSuggestion.area 
+      area: aiSuggestion.area,
+      city,
+      uf
     });
     setShowModal(false);
     setDescription('');
+    setCity('');
+    setUf('');
     setAiSuggestion(null);
   };
 
@@ -332,8 +347,16 @@ export const ClientDashboard = () => {
                   {c.status === CaseStatus.OPEN ? 'Aguardando' : c.status === CaseStatus.ACTIVE ? 'Em Andamento' : 'Concluído'}
                 </span>
               </div>
-              <p className="text-slate-600 text-sm mb-6 line-clamp-2">{c.description}</p>
+              <p className="text-slate-600 text-sm mb-4 line-clamp-2">{c.description}</p>
               
+              {/* Location Badge */}
+              {c.city && c.uf && (
+                  <div className="flex items-center text-xs text-slate-500 mb-4 bg-slate-50 inline-flex px-2 py-1 rounded border border-slate-100">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      {c.city} - {c.uf}
+                  </div>
+              )}
+
               {/* Timeline Mini */}
               <div className="flex items-center space-x-2 text-xs text-slate-400 mb-6">
                  <div className="flex items-center"><div className="w-2 h-2 bg-indigo-600 rounded-full mr-1"></div> Criado</div>
@@ -379,6 +402,32 @@ export const ClientDashboard = () => {
             <div className="p-6">
               {!aiSuggestion ? (
                 <>
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Cidade</label>
+                        <input 
+                            type="text" 
+                            className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="Ex: São Paulo"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">UF</label>
+                        <select 
+                            className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            value={uf}
+                            onChange={(e) => setUf(e.target.value)}
+                        >
+                            <option value="">Selecione</option>
+                            {BRAZIL_STATES.map(state => (
+                                <option key={state} value={state}>{state}</option>
+                            ))}
+                        </select>
+                      </div>
+                  </div>
+
                   <label className="block text-sm font-medium text-slate-700 mb-2">Descreva seu problema jurídico com detalhes</label>
                   <textarea 
                     className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[150px] mb-4 text-slate-800"
@@ -388,7 +437,7 @@ export const ClientDashboard = () => {
                   />
                   <button 
                     onClick={handleAnalyze}
-                    disabled={description.length < 10 || analyzing}
+                    disabled={description.length < 10 || !city || !uf || analyzing}
                     className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center transition"
                   >
                     {analyzing ? <span className="animate-pulse">Analisando com IA...</span> : 'Continuar'}
@@ -405,8 +454,13 @@ export const ClientDashboard = () => {
                        </div>
                     </div>
                     <p className="text-indigo-800/80 text-sm mb-2">{aiSuggestion.summary}</p>
-                    <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-indigo-700 border border-indigo-200">
-                      Área: {aiSuggestion.area}
+                    <div className="flex flex-wrap gap-2">
+                        <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-indigo-700 border border-indigo-200">
+                        Área: {aiSuggestion.area}
+                        </div>
+                        <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-slate-700 border border-slate-200 flex items-center">
+                        <MapPin className="w-3 h-3 mr-1"/> {city} - {uf}
+                        </div>
                     </div>
                   </div>
                   <div className="flex space-x-3 mt-6">
@@ -444,7 +498,18 @@ export const LawyerDashboard = () => {
   const [activeTab, setActiveTab] = useState<'feed' | 'my'>('feed');
   const [activeCase, setActiveCase] = useState<Case | null>(null);
 
-  const availableCases = cases.filter(c => c.status === CaseStatus.OPEN);
+  // Filters
+  const [filterCity, setFilterCity] = useState('');
+  const [filterUF, setFilterUF] = useState('');
+
+  // Filtragems
+  const availableCases = cases.filter(c => {
+      const isStatusOpen = c.status === CaseStatus.OPEN;
+      const matchesCity = !filterCity || (c.city && c.city.toLowerCase().includes(filterCity.toLowerCase()));
+      const matchesUF = !filterUF || c.uf === filterUF;
+      return isStatusOpen && matchesCity && matchesUF;
+  });
+
   const myCases = cases.filter(c => c.lawyerId === currentUser?.id);
 
   if (!currentUser?.verified) {
@@ -524,13 +589,43 @@ export const LawyerDashboard = () => {
           Meus Casos
         </button>
       </div>
+      
+      {/* Filter Bar (Only for Feed) */}
+      {activeTab === 'feed' && (
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex items-center text-slate-500 font-semibold mr-2">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtrar Local:
+              </div>
+              <div className="flex-1 w-full relative">
+                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Filtrar por Cidade" 
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={filterCity}
+                    onChange={(e) => setFilterCity(e.target.value)}
+                  />
+              </div>
+              <div className="w-full md:w-32">
+                  <select 
+                    className="w-full py-2 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={filterUF}
+                    onChange={(e) => setFilterUF(e.target.value)}
+                  >
+                      <option value="">Todos UF</option>
+                      {BRAZIL_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                  </select>
+              </div>
+          </div>
+      )}
 
       {/* Content */}
       <div className="grid gap-6 animate-in slide-in-from-bottom-8 duration-700">
         {activeTab === 'feed' ? (
           availableCases.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-              <p className="text-slate-500">Nenhuma oportunidade disponível no momento.</p>
+              <p className="text-slate-500">Nenhuma oportunidade disponível com esses filtros.</p>
             </div>
           ) : (
             availableCases.map(c => (
@@ -538,7 +633,13 @@ export const LawyerDashboard = () => {
                 <div className="mb-4 md:mb-0 max-w-2xl">
                   <div className="flex items-center space-x-3 mb-2">
                      <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider">{c.area}</span>
-                     <span className="text-slate-400 text-xs">{new Date(c.createdAt).toLocaleDateString()}</span>
+                     {c.city && c.uf && (
+                        <span className="flex items-center text-slate-500 text-xs font-semibold">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {c.city} - {c.uf}
+                        </span>
+                     )}
+                     <span className="text-slate-400 text-xs">· {new Date(c.createdAt).toLocaleDateString()}</span>
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-1">{c.title}</h3>
                   <p className="text-slate-600 text-sm">{c.description}</p>
@@ -571,6 +672,13 @@ export const LawyerDashboard = () => {
               </div>
               <h4 className="font-semibold text-slate-800 mb-2">{c.title}</h4>
               <p className="text-slate-600 text-sm mb-4 line-clamp-2">{c.description}</p>
+              
+              {c.city && c.uf && (
+                 <div className="flex items-center text-xs text-slate-400 mb-3">
+                    <MapPin className="w-3 h-3 mr-1" /> {c.city} - {c.uf}
+                 </div>
+              )}
+
               <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                 <span className="text-xs text-slate-400">Última atualização: hoje</span>
                 <button className="text-indigo-600 text-sm font-semibold hover:underline">Abrir Painel</button>
