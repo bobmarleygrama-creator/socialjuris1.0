@@ -21,6 +21,7 @@ export interface User {
   specialties?: string[]; // For lawyers
   phone?: string;
   bio?: string;
+  balance?: number; // Saldo de "Juris" para advogados
   createdAt: string;
 }
 
@@ -45,6 +46,12 @@ export interface Case {
   uf?: string;
   createdAt: string;
   messages: Message[];
+  
+  // Monetização
+  price?: number; // Valor pago pelo cliente (2, 4 ou 6 reais)
+  complexity?: 'Baixa' | 'Média' | 'Alta';
+  isPaid?: boolean;
+
   feedback?: {
     rating: number;
     comment: string;

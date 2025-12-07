@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2 } from 'lucide-react';
 import { Chat } from './Chat';
-import { analyzeCaseDescription } from '../services/geminiService';
+import { analyzeCaseDescription, calculateCasePrice } from '../services/geminiService';
 
 // --- CONSTANTES ---
 const BRAZIL_STATES = [
@@ -261,11 +261,9 @@ export const ClientDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   
   const [showModal, setShowModal] = useState(false);
-  
-  // CORREÇÃO: Em vez de armazenar o objeto Case (que fica estático), armazenamos o ID
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   
-  // Computamos o caso ativo sempre com base na lista 'cases' atualizada do Store
   const activeCase = cases.find(c => c.id === activeCaseId) || null;
   
   // Case Creation State
@@ -273,7 +271,8 @@ export const ClientDashboard = () => {
   const [city, setCity] = useState('');
   const [uf, setUf] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{ area: string; title: string; summary: string } | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<{ area: string; title: string; summary: string; complexity: 'Baixa'|'Média'|'Alta' } | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   const myCases = cases.filter(c => c.clientId === currentUser?.id);
 
@@ -289,20 +288,30 @@ export const ClientDashboard = () => {
     setAnalyzing(false);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!aiSuggestion) return;
-    createCase({ 
-      title: aiSuggestion.title, 
-      description, 
-      area: aiSuggestion.area,
-      city,
-      uf
-    });
-    setShowModal(false);
-    setDescription('');
-    setCity('');
-    setUf('');
-    setAiSuggestion(null);
+    setPaymentProcessing(true);
+    
+    // Simula delay de pagamento
+    setTimeout(async () => {
+        const price = calculateCasePrice(aiSuggestion.complexity);
+        await createCase({ 
+          title: aiSuggestion.title, 
+          description, 
+          area: aiSuggestion.area,
+          city,
+          uf,
+          price,
+          complexity: aiSuggestion.complexity
+        });
+        setPaymentProcessing(false);
+        setShowPaymentModal(false);
+        setShowModal(false);
+        setDescription('');
+        setCity('');
+        setUf('');
+        setAiSuggestion(null);
+    }, 2500);
   };
 
   const renderDashboardContent = () => (
@@ -339,7 +348,10 @@ export const ClientDashboard = () => {
             <div key={c.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 mb-2 border border-indigo-100">{c.area}</span>
+                  <div className="flex space-x-2 mb-2">
+                      <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">{c.area}</span>
+                      {c.isPaid && <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 border border-green-100 flex items-center"><Check className="w-3 h-3 mr-1"/> Pago</span>}
+                  </div>
                   <h3 className="text-lg font-bold text-slate-900">{c.title}</h3>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -456,24 +468,77 @@ export const ClientDashboard = () => {
                          <h4 className="font-bold text-indigo-900 text-lg">{aiSuggestion.title}</h4>
                        </div>
                     </div>
-                    <p className="text-indigo-800/80 text-sm mb-2">{aiSuggestion.summary}</p>
-                    <div className="flex flex-wrap gap-2">
+                    <p className="text-indigo-800/80 text-sm mb-4">{aiSuggestion.summary}</p>
+                    <div className="flex flex-wrap gap-2 mb-4">
                         <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-indigo-700 border border-indigo-200">
                         Área: {aiSuggestion.area}
                         </div>
                         <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-slate-700 border border-slate-200 flex items-center">
                         <MapPin className="w-3 h-3 mr-1"/> {city} - {uf}
                         </div>
+                        <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-purple-700 border border-purple-200">
+                        Complexidade: {aiSuggestion.complexity}
+                        </div>
+                    </div>
+                    <div className="border-t border-indigo-200 pt-3 flex justify-between items-center">
+                        <span className="text-sm text-indigo-800 font-medium">Valor de Publicação:</span>
+                        <span className="text-xl font-bold text-indigo-900">R$ {calculateCasePrice(aiSuggestion.complexity).toFixed(2).replace('.', ',')}</span>
                     </div>
                   </div>
                   <div className="flex space-x-3 mt-6">
                      <button onClick={() => setAiSuggestion(null)} className="flex-1 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition">Voltar</button>
-                     <button onClick={handleCreate} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20">Confirmar e Criar</button>
+                     <button onClick={() => setShowPaymentModal(true)} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20">
+                         Pagar e Publicar
+                     </button>
                   </div>
                 </div>
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Payment Simulation Modal */}
+      {showPaymentModal && aiSuggestion && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-900 flex items-center"><CreditCard className="w-5 h-5 mr-2 text-indigo-600"/> Checkout Seguro</h3>
+                    <button onClick={() => !paymentProcessing && setShowPaymentModal(false)}><X className="w-5 h-5 text-slate-400"/></button>
+                </div>
+                <div className="p-8">
+                    {paymentProcessing ? (
+                        <div className="text-center py-8">
+                            <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mx-auto mb-4" />
+                            <h4 className="text-lg font-bold text-slate-900">Processando Pagamento...</h4>
+                            <p className="text-slate-500">Aguarde a confirmação do banco.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="text-center mb-8">
+                                <p className="text-sm text-slate-500 mb-1">Total a Pagar</p>
+                                <div className="text-4xl font-extrabold text-slate-900">R$ {calculateCasePrice(aiSuggestion.complexity).toFixed(2).replace('.',',')}</div>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 space-y-3">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+                                    <div className="h-2 w-24 bg-slate-200 rounded"></div>
+                                </div>
+                                <div className="h-2 w-full bg-slate-200 rounded"></div>
+                            </div>
+                            <button 
+                                onClick={handleCreate} 
+                                className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-green-600/30 transition transform hover:-translate-y-1"
+                            >
+                                Confirmar Pagamento
+                            </button>
+                            <p className="text-xs text-center text-slate-400 mt-4 flex items-center justify-center">
+                                <Shield className="w-3 h-3 mr-1"/> Ambiente criptografado e seguro
+                            </p>
+                        </>
+                    )}
+                </div>
+            </div>
         </div>
       )}
 
@@ -496,11 +561,11 @@ export const ClientDashboard = () => {
 
 // --- LAWYER DASHBOARD ---
 export const LawyerDashboard = () => {
-  const { cases, currentUser, acceptCase, users, logout } = useApp();
+  const { cases, currentUser, acceptCase, users, logout, buyJuris } = useApp();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [activeTab, setActiveTab] = useState<'feed' | 'my'>('feed');
+  const [showBuyJuris, setShowBuyJuris] = useState(false);
   
-  // CORREÇÃO: Mesmo princípio aqui, usamos activeCaseId para reatividade
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const activeCase = cases.find(c => c.id === activeCaseId) || null;
 
@@ -547,9 +612,60 @@ export const LawyerDashboard = () => {
 
   const getClientName = (id: string) => users.find(u => u.id === id)?.name || "Cliente";
 
+  const BuyJurisModal = () => (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+              <div className="bg-indigo-900 px-8 py-6 flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-white text-xl flex items-center"><Coins className="w-6 h-6 mr-2 text-yellow-400"/> Recarregar Juris</h3>
+                    <p className="text-indigo-200 text-sm">Adquira créditos para aceitar novas demandas</p>
+                  </div>
+                  <button onClick={() => setShowBuyJuris(false)} className="text-white/70 hover:text-white"><X className="w-6 h-6"/></button>
+              </div>
+              <div className="p-8 grid md:grid-cols-3 gap-6">
+                  {[
+                      { amount: 25, price: 49, color: 'bg-slate-100', btn: 'bg-slate-900', popular: false },
+                      { amount: 50, price: 79, color: 'bg-indigo-50 border-indigo-200', btn: 'bg-indigo-600', popular: true },
+                      { amount: 100, price: 109, color: 'bg-slate-100', btn: 'bg-slate-900', popular: false }
+                  ].map((pkg) => (
+                      <div key={pkg.amount} className={`relative rounded-2xl p-6 border ${pkg.popular ? 'border-2 border-indigo-500 shadow-xl' : 'border-slate-200'} flex flex-col items-center text-center transition hover:scale-105`}>
+                          {pkg.popular && <span className="absolute -top-3 bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Mais Popular</span>}
+                          <div className="mb-4">
+                              <Coins className={`w-12 h-12 ${pkg.popular ? 'text-indigo-600' : 'text-slate-700'}`} />
+                          </div>
+                          <div className="text-3xl font-extrabold text-slate-900 mb-1">{pkg.amount} Juris</div>
+                          <div className="text-slate-500 mb-6">Pacote Profissional</div>
+                          <div className="text-2xl font-bold text-slate-900 mb-6">R$ {pkg.price},00</div>
+                          <button 
+                            onClick={() => { buyJuris(pkg.amount); setShowBuyJuris(false); }}
+                            className={`w-full py-3 rounded-xl font-bold text-white transition ${pkg.btn} hover:opacity-90`}
+                          >
+                              Comprar Agora
+                          </button>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      </div>
+  );
+
   const renderDashboardContent = () => (
     <>
-      {/* Stats */}
+      {/* Header Stats with Balance */}
+      <div className="flex justify-between items-center mb-6">
+           <h2 className="text-2xl font-bold text-slate-900">Portal do Advogado</h2>
+           <button 
+             onClick={() => setShowBuyJuris(true)}
+             className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-full flex items-center shadow-lg transition transform hover:-translate-y-1"
+           >
+               <div className="bg-yellow-400 rounded-full p-1 mr-2"><Coins className="w-4 h-4 text-yellow-900"/></div>
+               <span className="font-bold mr-1">{currentUser?.balance || 0}</span> 
+               <span className="text-slate-400 text-sm font-normal ml-1">Juris</span>
+               <Plus className="w-4 h-4 ml-3 text-slate-400"/>
+           </button>
+      </div>
+
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-in slide-in-from-bottom-4 duration-500">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
            <div className="flex items-center justify-between">
@@ -642,8 +758,8 @@ export const LawyerDashboard = () => {
             </div>
           ) : (
             availableCases.map(c => (
-              <div key={c.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center hover:border-indigo-200 transition">
-                <div className="mb-4 md:mb-0 max-w-2xl">
+              <div key={c.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center hover:border-indigo-200 transition relative overflow-hidden group">
+                <div className="mb-4 md:mb-0 max-w-2xl relative z-10">
                   <div className="flex items-center space-x-3 mb-2">
                      <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider">{c.area}</span>
                      {c.city && c.uf && (
@@ -652,17 +768,23 @@ export const LawyerDashboard = () => {
                             {c.city} - {c.uf}
                         </span>
                      )}
-                     <span className="text-slate-400 text-xs">· {new Date(c.createdAt).toLocaleDateString()}</span>
+                     <span className="flex items-center text-green-600 text-xs font-semibold bg-green-50 px-2 py-1 rounded">
+                         <DollarSign className="w-3 h-3 mr-1"/> Cliente Pagante
+                     </span>
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-1">{c.title}</h3>
                   <p className="text-slate-600 text-sm">{c.description}</p>
                 </div>
-                <button 
-                  onClick={() => acceptCase(c.id)}
-                  className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20 whitespace-nowrap w-full md:w-auto"
-                >
-                  Aceitar Caso
-                </button>
+                
+                <div className="flex flex-col items-end space-y-2 relative z-10">
+                    <button 
+                      onClick={() => acceptCase(c.id)}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20 whitespace-nowrap w-full md:w-auto flex items-center"
+                    >
+                      <span>Aceitar Caso</span>
+                      <span className="ml-2 bg-indigo-800 text-indigo-100 text-xs py-0.5 px-2 rounded-full">-5 Juris</span>
+                    </button>
+                </div>
               </div>
             ))
           )
@@ -700,6 +822,8 @@ export const LawyerDashboard = () => {
           ))
         )}
       </div>
+
+      {showBuyJuris && <BuyJurisModal />}
     </>
   );
 

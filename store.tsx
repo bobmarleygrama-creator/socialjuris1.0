@@ -11,12 +11,13 @@ interface AppContextType {
   logout: () => Promise<void>;
   register: (user: Omit<User, 'id' | 'createdAt' | 'avatar'>, password?: string) => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
-  createCase: (data: { title: string; description: string; area: string; city: string; uf: string }) => Promise<void>;
+  createCase: (data: { title: string; description: string; area: string; city: string; uf: string; price: number; complexity: string }) => Promise<void>;
   acceptCase: (caseId: string) => Promise<void>;
   sendMessage: (caseId: string, content: string, type?: 'text' | 'image' | 'file') => Promise<void>;
   verifyLawyer: (userId: string) => Promise<void>;
   closeCase: (caseId: string, rating: number, comment: string) => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
+  buyJuris: (amount: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -64,7 +65,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .on('postgres_changes', { event: '*', schema: 'public', table: 'cases' }, () => fetchCases())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => fetchCases()) // Recarrega casos para pegar msgs novas
         .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchNotifications())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchUsers())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+             fetchUsers();
+             if (currentUser) fetchUserProfile(currentUser.id); // Atualiza saldo se mudar
+        })
         .subscribe();
 
       return () => {
@@ -90,7 +94,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...data,
         createdAt: data.created_at,
         oab: data.oab || undefined,
-        verified: data.verified || false
+        verified: data.verified || false,
+        balance: data.balance || 0
       });
     }
   };
@@ -123,6 +128,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         city: c.city,
         uf: c.uf,
         createdAt: c.created_at,
+        price: c.price,
+        complexity: c.complexity,
+        isPaid: c.is_paid,
         feedback: c.feedback_rating ? { rating: c.feedback_rating, comment: c.feedback_comment } : undefined,
         messages: (c.messages || []).map((m: any) => ({
           id: m.id,
@@ -146,7 +154,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .order('timestamp', { ascending: false });
     
     if (data) {
-      setNotifications(data);
+      // Mapeamento correto user_id -> userId
+      const formatted: Notification[] = data.map((n: any) => ({
+          id: n.id,
+          userId: n.user_id,
+          title: n.title,
+          message: n.message,
+          read: n.read,
+          type: n.type,
+          timestamp: n.timestamp || n.created_at 
+      }));
+      setNotifications(formatted);
     }
   };
 
@@ -233,6 +251,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         role: userData.role,
         oab: userData.role === 'LAWYER' ? userData.oab : null,
         verified: userData.role === 'CLIENT', // Clientes já nascem verificados
+        balance: userData.role === 'LAWYER' ? 0 : null, // Saldo inicial 0 para advogados
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`,
         created_at: new Date().toISOString()
       });
@@ -272,7 +291,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const createCase = async (data: { title: string; description: string; area: string; city: string; uf: string }) => {
+  const createCase = async (data: { title: string; description: string; area: string; city: string; uf: string; price: number; complexity: string }) => {
     if (!currentUser) return;
     
     const { data: newCase, error } = await supabase
@@ -284,7 +303,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         area: data.area,
         city: data.city,
         uf: data.uf,
-        status: 'OPEN'
+        status: 'OPEN',
+        price: data.price,
+        complexity: data.complexity,
+        is_paid: true // Simula que já foi pago no fluxo de UI
       })
       .select()
       .single();
@@ -293,19 +315,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // Adicionar mensagem de sistema
       await supabase.from('messages').insert({
         case_id: newCase.id,
-        sender_id: currentUser.id, // Tecnicamente sistema, mas usamos ID válido para FK
-        content: `Caso criado em ${new Date().toLocaleDateString()} em ${data.city}/${data.uf}. Aguardando advogado.`,
+        sender_id: currentUser.id, 
+        content: `Caso criado com sucesso. Taxa de publicação (R$ ${data.price.toFixed(2)}) confirmada.`,
         type: 'system'
       });
       fetchCases();
     } else {
         console.error("Erro ao criar caso:", error);
-        alert("Erro ao criar caso. Verifique se as colunas 'city' e 'uf' foram criadas no Supabase.");
+        alert("Erro ao criar caso. " + (error?.message || ""));
     }
   };
 
   const acceptCase = async (caseId: string) => {
     if (!currentUser || currentUser.role !== UserRole.LAWYER) return;
+
+    // Verificar Saldo (Custo: 5 Juris)
+    const COST_IN_JURIS = 5;
+    if ((currentUser.balance || 0) < COST_IN_JURIS) {
+        alert("Saldo Insuficiente! Você precisa de 5 Juris para aceitar este caso. Recarregue seu saldo.");
+        return;
+    }
+
+    // Transação Simples: Deduz saldo e atualiza caso
+    const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: (currentUser.balance || 0) - COST_IN_JURIS })
+        .eq('id', currentUser.id);
+
+    if (balanceError) {
+        alert("Erro ao processar pagamento de Juris.");
+        return;
+    }
 
     const { error } = await supabase
       .from('cases')
@@ -316,6 +356,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .eq('id', caseId);
 
     if (!error) {
+      // Atualizar saldo local imediatamente para UI
+      setCurrentUser(prev => prev ? ({ ...prev, balance: (prev.balance || 0) - COST_IN_JURIS }) : null);
+
       // Notificar cliente
       const targetCase = cases.find(c => c.id === caseId);
       if (targetCase) {
@@ -337,6 +380,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const buyJuris = async (amount: number) => {
+      if (!currentUser) return;
+      const currentBalance = currentUser.balance || 0;
+      const newBalance = currentBalance + amount;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', currentUser.id);
+
+      if (error) {
+          alert("Erro na compra: " + error.message);
+      } else {
+          // Atualiza local e força refetch
+          setCurrentUser(prev => prev ? ({ ...prev, balance: newBalance }) : null);
+          alert(`Compra realizada com sucesso! +${amount} Juris adicionados.`);
+      }
+  };
+
   const sendMessage = async (caseId: string, content: string, type: 'text' | 'image' | 'file' = 'text') => {
     if (!currentUser) return;
 
@@ -346,33 +408,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         sender_id: currentUser.id,
         content,
         type,
-        file_url: type !== 'text' ? 'https://picsum.photos/400/300' : null // Mock de upload real para simplificar
+        file_url: type !== 'text' ? 'https://picsum.photos/400/300' : null 
     });
 
     if (!error) {
         // 2. Garantir que temos o caso atualizado para saber quem é o destinatário
-        // A lista local 'cases' pode ter um atraso, então buscamos a info do caso específico se necessário,
-        // mas por performance usamos a lista local primeiro.
         const currentCase = cases.find(c => c.id === caseId);
         
         if (currentCase) {
-            // Se eu sou o cliente, o destinatário é o advogado
-            // Se eu sou o advogado, o destinatário é o cliente
             const recipientId = currentUser.id === currentCase.clientId ? currentCase.lawyerId : currentCase.clientId;
 
             if (recipientId) {
-                console.log(`Enviando notificação para: ${recipientId}`);
                 await supabase.from('notifications').insert({
                     user_id: recipientId,
                     title: 'Nova Mensagem',
                     message: `${currentUser.name} enviou uma mensagem.`,
                     type: 'info',
-                    read: false // Explicitamente não lida
+                    read: false 
                 });
             }
         }
-        
-        // Forçar atualização imediata para o usuário atual ver sua msg enviada sem delay
         fetchCases();
     }
   };
@@ -405,9 +460,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const markNotificationAsRead = async (id: string) => {
-      // Otimista: atualiza localmente primeiro
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-      
       await supabase
         .from('notifications')
         .update({ read: true })
@@ -416,7 +469,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <AppContext.Provider value={{ currentUser, users, cases, notifications, login, logout, register, updateProfile, createCase, acceptCase, sendMessage, verifyLawyer, closeCase, markNotificationAsRead }}>
+    <AppContext.Provider value={{ currentUser, users, cases, notifications, login, logout, register, updateProfile, createCase, acceptCase, sendMessage, verifyLawyer, closeCase, markNotificationAsRead, buyJuris }}>
       {children}
     </AppContext.Provider>
   );
