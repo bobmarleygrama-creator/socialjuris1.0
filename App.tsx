@@ -5,7 +5,17 @@ import { Landing } from './components/Landing';
 import { ClientDashboard, LawyerDashboard, AdminDashboard } from './components/Dashboards';
 import { Loader2, Mail, Lock, User, Briefcase, ChevronRight } from 'lucide-react';
 
-const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: UserRole; onBack: () => void }) => {
+const AuthScreen = ({ 
+  type, 
+  role, 
+  onBack, 
+  onSwitchMode 
+}: { 
+  type: 'login' | 'register'; 
+  role: UserRole; 
+  onBack: () => void;
+  onSwitchMode: () => void;
+}) => {
   const { login, register } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,8 +28,11 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
     if (role === UserRole.ADMIN && type === 'login') {
       setEmail('admin@socialjuris.com');
     } else {
-      setEmail('');
+      // Keep email if switching modes to improve UX, only clear if empty context
+      if (!email) setEmail('');
     }
+    // Don't clear password on type switch to avoid frustration, or clear if security preferred. 
+    // Let's clear for realism.
     setPassword('');
   }, [role, type]);
 
@@ -56,9 +69,9 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-       <button onClick={onBack} className="absolute top-8 left-8 text-slate-500 hover:text-indigo-600 font-medium transition flex items-center">
-         <span className="mr-1">←</span> Voltar
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative">
+       <button onClick={onBack} className="absolute top-8 left-8 text-slate-500 hover:text-indigo-600 font-medium transition flex items-center z-10">
+         <span className="mr-1">←</span> Voltar para Home
        </button>
        
        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 border border-slate-100 animate-in fade-in zoom-in duration-300">
@@ -69,7 +82,7 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
 
           <form onSubmit={handleSubmit} className="space-y-5">
              {type === 'register' && (
-               <div className="space-y-1">
+               <div className="space-y-1 animate-in slide-in-from-top-2 duration-300">
                  <label className="text-sm font-medium text-slate-700 ml-1">Nome Completo</label>
                  <div className="relative">
                    <User className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
@@ -102,7 +115,7 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
              </div>
 
              {type === 'register' && role === UserRole.LAWYER && (
-                <div className="space-y-1">
+                <div className="space-y-1 animate-in slide-in-from-top-2 duration-300">
                   <label className="text-sm font-medium text-slate-700 ml-1">Registro OAB</label>
                   <div className="relative">
                     <Briefcase className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
@@ -115,6 +128,19 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (type === 'login' ? 'Entrar' : 'Cadastrar')}
              </button>
           </form>
+
+          {/* Toggle Login/Register Section */}
+          <div className="mt-8 text-center pt-6 border-t border-slate-100">
+            <p className="text-slate-600 text-sm">
+              {type === 'login' ? 'Não tem uma conta?' : 'Já possui cadastro?'}
+              <button 
+                onClick={onSwitchMode}
+                className="ml-2 text-indigo-600 font-bold hover:underline hover:text-indigo-800 transition-colors"
+              >
+                {type === 'login' ? 'Cadastre-se agora' : 'Faça Login'}
+              </button>
+            </p>
+          </div>
 
           {type === 'login' && role === UserRole.ADMIN && (
              <div className="mt-6 text-center text-xs text-slate-500 bg-slate-100 p-3 rounded-lg border border-slate-200">
@@ -139,8 +165,24 @@ const MainApp = () => {
     }
   }
 
+  const toggleAuthMode = () => {
+    if (authView) {
+      setAuthView({
+        ...authView,
+        type: authView.type === 'login' ? 'register' : 'login'
+      });
+    }
+  };
+
   if (authView) {
-    return <AuthScreen type={authView.type} role={authView.role} onBack={() => setAuthView(null)} />;
+    return (
+      <AuthScreen 
+        type={authView.type} 
+        role={authView.role} 
+        onBack={() => setAuthView(null)} 
+        onSwitchMode={toggleAuthMode}
+      />
+    );
   }
 
   return <Landing onAuth={(type, role) => setAuthView({ type, role })} />;
