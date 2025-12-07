@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './store';
 import { UserRole } from './types';
 import { Landing } from './components/Landing';
@@ -12,6 +12,16 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
   const [name, setName] = useState('');
   const [oab, setOab] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-fill admin credentials for convenience if Admin role is selected
+  useEffect(() => {
+    if (role === UserRole.ADMIN && type === 'login') {
+      setEmail('admin@socialjuris.com');
+    } else {
+      setEmail('');
+    }
+    setPassword('');
+  }, [role, type]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +42,24 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
     }, 1000);
   };
 
+  const getRoleTitle = () => {
+    switch (role) {
+      case UserRole.CLIENT: return 'Clientes';
+      case UserRole.LAWYER: return 'Advogados';
+      case UserRole.ADMIN: return 'Administradores';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-       <button onClick={onBack} className="absolute top-8 left-8 text-slate-500 hover:text-indigo-600 font-medium transition">← Voltar</button>
+       <button onClick={onBack} className="absolute top-8 left-8 text-slate-500 hover:text-indigo-600 font-medium transition flex items-center">
+         <span className="mr-1">←</span> Voltar
+       </button>
        
        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 border border-slate-100 animate-in fade-in zoom-in duration-300">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-slate-900 mb-2">{type === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}</h2>
-            <p className="text-slate-500">Acesso para {role === UserRole.CLIENT ? 'Clientes' : role === UserRole.LAWYER ? 'Advogados' : 'Administradores'}</p>
+            <p className="text-slate-500">Acesso para <span className="text-indigo-600 font-semibold">{getRoleTitle()}</span></p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -85,8 +105,8 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
           </form>
 
           {type === 'login' && role === UserRole.ADMIN && (
-             <div className="mt-4 text-center text-xs text-slate-400 bg-slate-100 p-2 rounded">
-               Dica: use admin@socialjuris.com / qualquer senha
+             <div className="mt-6 text-center text-xs text-slate-500 bg-slate-100 p-3 rounded-lg border border-slate-200">
+               <span className="font-bold">Dica de Acesso:</span> O sistema preencheu o email automaticamente. Use qualquer senha para entrar.
              </div>
           )}
        </div>

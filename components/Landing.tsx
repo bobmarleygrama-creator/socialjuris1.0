@@ -139,10 +139,18 @@ export const Landing: React.FC<LandingProps> = ({ onAuth }) => {
             <Scale className="h-6 w-6 text-indigo-500" />
             <span className="text-xl font-bold text-white">SocialJuris</span>
           </div>
-          <div className="flex space-x-6 text-sm">
+          <div className="flex space-x-6 text-sm items-center">
             <a href="#" className="hover:text-white transition">Termos de Uso</a>
             <a href="#" className="hover:text-white transition">Privacidade</a>
             <a href="#" className="hover:text-white transition">Contato</a>
+            <span className="text-slate-700">|</span>
+            <button 
+              onClick={() => onAuth('login', UserRole.ADMIN)}
+              className="text-indigo-400 hover:text-white transition font-medium flex items-center"
+            >
+              <Lock className="w-3 h-3 mr-1" />
+              Área Administrativa
+            </button>
           </div>
           <div className="mt-4 md:mt-0 text-sm text-slate-500">
             © 2024 SocialJuris. Todos os direitos reservados.
