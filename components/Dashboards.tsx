@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification, StrategyAnalysis, CalculationResult } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock, Eye, XCircle } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription, calculateCasePrice, analyzeOpposingStrategy, calculateLegalAdjustment } from '../services/geminiService';
 
@@ -1283,11 +1283,125 @@ export const LawyerDashboard = () => {
 export const AdminDashboard = () => {
   const { users, verifyLawyer, cases, togglePremiumStatus } = useApp();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
+  const [selectedLawyer, setSelectedLawyer] = useState<User | null>(null);
+
   const lawyers = users.filter(u => u.role === UserRole.LAWYER);
   const pendingLawyers = lawyers.filter(u => !u.verified);
 
+  const LawyerDetailsPanel = () => {
+    if (!selectedLawyer) return null;
+
+    return (
+      <>
+        {/* Backdrop */}
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] transition-opacity" 
+          onClick={() => setSelectedLawyer(null)}
+        ></div>
+        
+        {/* Side Drawer */}
+        <div className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white shadow-2xl z-[70] transform transition-transform animate-in slide-in-from-right duration-300 flex flex-col">
+           {/* Header */}
+           <div className="bg-slate-900 text-white p-6 flex justify-between items-start">
+              <div className="flex items-center space-x-4">
+                  <img src={selectedLawyer.avatar} alt="Avatar" className="w-16 h-16 rounded-full border-4 border-slate-800" />
+                  <div>
+                      <h3 className="text-xl font-bold">{selectedLawyer.name}</h3>
+                      <p className="text-slate-400 text-sm">{selectedLawyer.email}</p>
+                  </div>
+              </div>
+              <button 
+                onClick={() => setSelectedLawyer(null)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                  <X className="w-6 h-6" />
+              </button>
+           </div>
+
+           {/* Content */}
+           <div className="flex-1 overflow-y-auto p-6 space-y-8">
+               
+               {/* OAB Status Card */}
+               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start space-x-3">
+                   <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                   <div>
+                       <h4 className="font-bold text-yellow-800 text-sm">Verificação Necessária</h4>
+                       <p className="text-yellow-700 text-sm">Confira os dados abaixo junto ao Cadastro Nacional de Advogados (CNA) antes de aprovar.</p>
+                   </div>
+               </div>
+
+               {/* Details Grid */}
+               <div className="grid grid-cols-2 gap-4">
+                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                       <div className="flex items-center text-slate-500 mb-2">
+                           <Shield className="w-4 h-4 mr-2" />
+                           <span className="text-xs font-bold uppercase">Registro OAB</span>
+                       </div>
+                       <p className="text-lg font-mono font-bold text-slate-900">{selectedLawyer.oab || 'Não informado'}</p>
+                   </div>
+                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                       <div className="flex items-center text-slate-500 mb-2">
+                           <Calendar className="w-4 h-4 mr-2" />
+                           <span className="text-xs font-bold uppercase">Data de Registro</span>
+                       </div>
+                       <p className="text-lg font-bold text-slate-900">{new Date(selectedLawyer.createdAt).toLocaleDateString()}</p>
+                   </div>
+               </div>
+
+               {/* Contact Info */}
+               <div className="space-y-4">
+                   <h4 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-2">Informações de Contato</h4>
+                   <div className="space-y-3">
+                       <div className="flex items-center">
+                           <Mail className="w-5 h-5 text-slate-400 mr-3" />
+                           <span className="text-slate-700">{selectedLawyer.email}</span>
+                       </div>
+                       <div className="flex items-center">
+                           <Phone className="w-5 h-5 text-slate-400 mr-3" />
+                           <span className="text-slate-700">{selectedLawyer.phone || 'Não informado'}</span>
+                       </div>
+                   </div>
+               </div>
+
+               {/* Bio */}
+               <div className="space-y-4">
+                   <h4 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-2">Resumo Profissional</h4>
+                   <p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+                       {selectedLawyer.bio || 'O usuário não forneceu uma biografia.'}
+                   </p>
+               </div>
+           </div>
+
+           {/* Footer Actions */}
+           <div className="p-6 border-t border-slate-100 bg-slate-50 flex space-x-4">
+               <button 
+                  onClick={() => {
+                      alert("Funcionalidade de rejeição simulada. O usuário será notificado.");
+                      setSelectedLawyer(null);
+                  }}
+                  className="flex-1 py-3 px-4 border border-slate-300 rounded-xl text-slate-700 font-bold hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition flex items-center justify-center"
+               >
+                   <XCircle className="w-5 h-5 mr-2" /> Recusar
+               </button>
+               <button 
+                  onClick={() => {
+                      verifyLawyer(selectedLawyer.id);
+                      setSelectedLawyer(null);
+                  }}
+                  className="flex-[2] py-3 px-4 bg-green-600 rounded-xl text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition flex items-center justify-center"
+               >
+                   <Check className="w-5 h-5 mr-2" /> Aprovar Cadastro
+               </button>
+           </div>
+        </div>
+      </>
+    );
+  };
+
   const renderDashboardContent = () => (
     <>
+      {selectedLawyer && <LawyerDetailsPanel />}
+
       {/* Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 animate-in slide-in-from-bottom-4 duration-500">
         <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-lg">
@@ -1314,11 +1428,15 @@ export const AdminDashboard = () => {
         ) : (
           <div className="divide-y divide-slate-100">
              {pendingLawyers.map(lawyer => (
-               <div key={lawyer.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition">
+               <div 
+                key={lawyer.id} 
+                onClick={() => setSelectedLawyer(lawyer)}
+                className="p-6 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer group"
+               >
                  <div className="flex items-center space-x-4">
                     <img src={lawyer.avatar} alt="" className="w-12 h-12 rounded-full" />
                     <div>
-                      <h4 className="font-bold text-slate-900">{lawyer.name}</h4>
+                      <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition">{lawyer.name}</h4>
                       <p className="text-sm text-slate-500">{lawyer.email}</p>
                       <div className="flex items-center mt-1 space-x-2">
                         <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-mono">OAB: {lawyer.oab || 'N/A'}</span>
@@ -1328,10 +1446,9 @@ export const AdminDashboard = () => {
                  </div>
                  <div className="flex space-x-3">
                    <button 
-                     onClick={() => verifyLawyer(lawyer.id)}
-                     className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-md shadow-green-600/20 transition flex items-center"
+                     className="text-slate-400 group-hover:text-indigo-600 transition"
                    >
-                     <Check className="w-4 h-4 mr-2" /> Aprovar
+                     <Eye className="w-5 h-5" />
                    </button>
                  </div>
                </div>
