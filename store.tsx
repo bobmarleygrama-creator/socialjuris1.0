@@ -410,21 +410,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const subscribePremium = async () => {
       if (!currentUser) return;
-      // Simulação de delay de pagamento
       
+      const currentBalance = currentUser.balance || 0;
+      const bonusJuris = 20;
+
+      // Update premium status AND balance
       const { error } = await supabase
         .from('profiles')
-        .update({ is_premium: true })
+        .update({ 
+            is_premium: true,
+            balance: currentBalance + bonusJuris 
+        })
         .eq('id', currentUser.id);
 
       if (error) {
           alert("Erro na assinatura: " + error.message);
       } else {
-          setCurrentUser(prev => prev ? ({ ...prev, isPremium: true }) : null);
+          setCurrentUser(prev => prev ? ({ ...prev, isPremium: true, balance: currentBalance + bonusJuris }) : null);
           await supabase.from('notifications').insert({
               user_id: currentUser.id,
               title: 'Bem-vindo ao SocialJuris PRO',
-              message: 'Seu acesso às ferramentas premium foi liberado.',
+              message: `Seu acesso Premium foi liberado e você recebeu ${bonusJuris} Juris de bônus!`,
               type: 'success'
           });
       }

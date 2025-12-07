@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification, StrategyAnalysis, CalculationResult } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription, calculateCasePrice, analyzeOpposingStrategy, calculateLegalAdjustment } from '../services/geminiService';
 
@@ -370,7 +370,7 @@ type ViewType = 'dashboard' | 'profile' | 'notifications' | 'pro_strategy' | 'pr
 const DashboardLayout: React.FC<{ 
     children: React.ReactNode; 
     title: string; 
-    activeView: ViewType;
+    activeView: ViewType; 
     onViewChange: (view: ViewType) => void; 
 }> = ({ children, title, activeView, onViewChange }) => {
   const { logout, currentUser, notifications, subscribePremium } = useApp();
@@ -387,60 +387,132 @@ const DashboardLayout: React.FC<{
       }, 2000);
   };
 
+  const proFeatures = [
+      {
+          icon: BrainCircuit,
+          color: 'text-indigo-600',
+          bg: 'bg-indigo-100',
+          title: "Opositor IA",
+          desc: "Análise estratégica de peças com detecção de falhas e jurisprudência."
+      },
+      {
+          icon: Calculator,
+          color: 'text-blue-600',
+          bg: 'bg-blue-100',
+          title: "Calculadora Visual",
+          desc: "Cálculos de atualização monetária com gráficos persuasivos."
+      },
+      {
+          icon: FileText,
+          color: 'text-green-600',
+          bg: 'bg-green-100',
+          title: "Redator One-Click",
+          desc: "Geração instantânea de petições iniciais baseadas no cadastro do cliente."
+      },
+      {
+          icon: FileSearch,
+          color: 'text-purple-600',
+          bg: 'bg-purple-100',
+          title: "Análise de Documentos",
+          desc: "Upload de arquivos para leitura e resumo automático via IA."
+      },
+      {
+          icon: Calendar,
+          color: 'text-pink-600',
+          bg: 'bg-pink-100',
+          title: "Agenda Inteligente",
+          desc: "Controle de prazos automatizado e sincronizado com os processos."
+      },
+      {
+          icon: Folders,
+          color: 'text-orange-600',
+          bg: 'bg-orange-100',
+          title: "Gestão CRM",
+          desc: "Gestão completa de clientes, processos e honorários em um só lugar."
+      }
+  ];
+
   const PremiumModal = () => (
-      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in zoom-in duration-300 relative">
-              <button onClick={() => setShowPremiumModal(false)} className="absolute top-4 right-4 z-20 bg-black/10 hover:bg-black/20 rounded-full p-2 transition"><X className="w-5 h-5 text-slate-600"/></button>
+      <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md flex items-center justify-center z-[70] p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-6xl overflow-hidden shadow-2xl flex flex-col lg:flex-row animate-in zoom-in duration-300 relative my-auto h-[90vh] lg:h-auto">
+              <button onClick={() => setShowPremiumModal(false)} className="absolute top-4 right-4 z-20 bg-slate-100 hover:bg-slate-200 rounded-full p-2 transition"><X className="w-5 h-5 text-slate-600"/></button>
               
-              {/* Left Side: Visual */}
-              <div className="bg-slate-900 text-white p-10 md:w-2/5 flex flex-col justify-between relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600/30 to-purple-600/30 z-0"></div>
-                  <div className="relative z-10">
-                      <div className="inline-flex items-center space-x-2 bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-xs font-bold mb-6">
-                          <Sparkles className="w-3 h-3"/> <span>SocialJuris PRO</span>
-                      </div>
-                      <h3 className="text-4xl font-extrabold mb-4 leading-tight">Potencialize sua Advocacia</h3>
-                      <p className="text-slate-300">Desbloqueie ferramentas exclusivas de inteligência e gestão.</p>
+              {/* Left Side: Features Grid */}
+              <div className="bg-slate-50 p-6 lg:p-10 lg:w-3/4 overflow-y-auto">
+                  <div className="inline-flex items-center space-x-2 bg-slate-900 text-amber-400 px-4 py-1.5 rounded-full text-xs font-bold mb-6 shadow-lg shadow-indigo-900/20">
+                      <Sparkles className="w-3 h-3"/> <span>MEMBER ACCESS</span>
                   </div>
-                  <div className="relative z-10 space-y-4 mt-8">
-                      <div className="flex items-center space-x-3 text-sm">
-                          <Check className="w-5 h-5 text-green-400"/> <span>Opositor IA (Análise de Peças)</span>
-                      </div>
-                      <div className="flex items-center space-x-3 text-sm">
-                          <Check className="w-5 h-5 text-green-400"/> <span>Calculadora Judicial Visual</span>
-                      </div>
-                      <div className="flex items-center space-x-3 text-sm">
-                          <Check className="w-5 h-5 text-green-400"/> <span>Gestão Avançada</span>
+                  <h3 className="text-3xl font-extrabold text-slate-900 mb-2">SocialJuris PRO</h3>
+                  <p className="text-slate-500 mb-8 text-lg">A suíte tecnológica completa para o advogado de alta performance.</p>
+                  
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {proFeatures.map((feat, idx) => (
+                          <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition group">
+                              <div className={`w-10 h-10 ${feat.bg} rounded-lg flex items-center justify-center ${feat.color} mb-3 group-hover:scale-110 transition-transform`}>
+                                  <feat.icon className="w-5 h-5"/>
+                              </div>
+                              <h4 className="font-bold text-slate-900 mb-1">{feat.title}</h4>
+                              <p className="text-xs text-slate-500 leading-relaxed">{feat.desc}</p>
+                          </div>
+                      ))}
+                      
+                      {/* Special Bonus Card */}
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-sm relative overflow-hidden ring-1 ring-amber-400/30 lg:col-span-3 flex items-center space-x-4">
+                           <div className="absolute top-0 right-0 bg-amber-400 text-amber-900 text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-sm">BÔNUS EXCLUSIVO</div>
+                           <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
+                               <Coins className="w-6 h-6"/>
+                           </div>
+                           <div>
+                               <h4 className="font-bold text-slate-900 text-lg">20 Juris Mensais Grátis</h4>
+                               <p className="text-sm text-slate-600">Ao assinar, você recebe créditos mensais (valor de R$ 40,00) para aceitar até 4 novos casos sem custo adicional.</p>
+                           </div>
                       </div>
                   </div>
               </div>
 
-              {/* Right Side: Action */}
-              <div className="p-10 md:w-3/5 bg-white flex flex-col justify-center">
-                  <div className="text-center mb-8">
-                      <p className="text-slate-500 uppercase tracking-widest text-xs font-bold mb-2">Plano Profissional</p>
-                      <div className="flex items-baseline justify-center">
-                          <span className="text-5xl font-extrabold text-slate-900">R$ 49</span>
-                          <span className="text-2xl font-bold text-slate-900">,90</span>
-                          <span className="text-slate-400 ml-2">/mês</span>
-                      </div>
-                  </div>
+              {/* Right Side: Pricing & CTA */}
+              <div className="bg-slate-900 p-8 lg:p-10 lg:w-1/4 text-white flex flex-col justify-center relative overflow-hidden shrink-0 border-l border-white/10">
+                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-slate-900 to-indigo-950 z-0"></div>
+                   
+                   <div className="relative z-10 text-center">
+                        <p className="text-indigo-300 font-bold uppercase tracking-widest text-xs mb-4">Plano Profissional</p>
+                        <div className="flex items-start justify-center mb-2">
+                             <span className="text-xl mt-2 font-medium text-slate-400 mr-1">R$</span>
+                             <span className="text-6xl font-extrabold text-white tracking-tighter">69</span>
+                             <div className="flex flex-col items-start mt-2 ml-1">
+                                 <span className="text-xl font-bold text-white leading-none">,90</span>
+                                 <span className="text-xs text-slate-400">/mês</span>
+                             </div>
+                        </div>
+                        <p className="text-slate-400 text-xs mb-8">Cancele quando quiser.</p>
 
-                  {processingPremium ? (
-                      <div className="text-center py-4">
-                          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-3"/>
-                          <p className="font-bold text-slate-900">Processando Pagamento...</p>
-                      </div>
-                  ) : (
-                      <button 
-                        onClick={handleSubscribe}
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-xl font-bold shadow-lg transform hover:-translate-y-1 transition-all flex items-center justify-center space-x-2"
-                      >
-                          <span>Assinar Agora</span>
-                          <CreditCard className="w-5 h-5 text-slate-400"/>
-                      </button>
-                  )}
-                  <p className="text-center text-xs text-slate-400 mt-4">Cancelamento grátis a qualquer momento.</p>
+                        {processingPremium ? (
+                            <div className="bg-white/10 rounded-xl p-6 backdrop-blur-sm">
+                                <Loader2 className="w-8 h-8 text-white animate-spin mx-auto mb-2"/>
+                                <p className="font-bold text-sm">Ativando sua conta...</p>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={handleSubscribe}
+                                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-amber-950 py-4 rounded-xl font-bold text-lg shadow-xl shadow-orange-900/40 transform hover:-translate-y-1 transition-all flex items-center justify-center space-x-2 group"
+                            >
+                                <span>Assinar Agora</span>
+                                <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform"/>
+                            </button>
+                        )}
+                        
+                        <div className="mt-8 space-y-3 text-left bg-white/5 p-4 rounded-xl border border-white/10">
+                            <div className="flex items-center text-xs text-slate-300">
+                                <Check className="w-3 h-3 text-green-400 mr-2 shrink-0"/> <span>Acesso total às ferramentas</span>
+                            </div>
+                            <div className="flex items-center text-xs text-slate-300">
+                                <Check className="w-3 h-3 text-green-400 mr-2 shrink-0"/> <span>Bônus de 20 Juris/mês</span>
+                            </div>
+                            <div className="flex items-center text-xs text-slate-300">
+                                <Check className="w-3 h-3 text-green-400 mr-2 shrink-0"/> <span>Suporte Prioritário</span>
+                            </div>
+                        </div>
+                   </div>
               </div>
           </div>
       </div>
@@ -507,12 +579,25 @@ const DashboardLayout: React.FC<{
                                 </button>
                             ))}
                             
-                            {/* Disabled/Future Tools */}
-                            {['Gestão de Contratos', 'Agenda Inteligente'].map((tool, idx) => (
-                                <div key={idx} className="w-full flex items-center space-x-3 px-3 py-2 text-slate-600 opacity-50 cursor-not-allowed">
-                                    <div className="p-1.5 rounded-md bg-slate-800"><Lock className="w-4 h-4"/></div>
-                                    <span className="text-sm">{tool}</span>
-                                </div>
+                            {/* Disabled/Future Tools - NOW TRIGGER THE MODAL */}
+                            {[
+                                { name: 'Análise Docs', icon: FileSearch },
+                                { name: 'Agenda Inteligente', icon: Calendar },
+                                { name: 'Gestão CRM', icon: Folders }
+                            ].map((tool, idx) => (
+                                <button 
+                                    key={idx} 
+                                    onClick={() => setShowPremiumModal(true)} // Opens the modal
+                                    className="w-full flex items-center space-x-3 px-3 py-2 text-slate-600 hover:text-amber-500 hover:bg-slate-800 rounded-lg transition-all group"
+                                >
+                                    <div className="p-1.5 rounded-md bg-slate-800 group-hover:bg-slate-700">
+                                        {tool.icon ? <tool.icon className="w-4 h-4" /> : <Lock className="w-4 h-4"/>}
+                                    </div>
+                                    <div className="flex justify-between w-full items-center">
+                                        <span className="text-sm">{tool.name}</span>
+                                        {!currentUser.isPremium && <Lock className="w-3 h-3 opacity-50"/>}
+                                    </div>
+                                </button>
                             ))}
                         </div>
                         
