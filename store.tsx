@@ -157,7 +157,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
 
     if (error) {
-      alert("Erro ao entrar: " + error.message);
+      if (error.message.includes("Email not confirmed")) {
+         alert("⚠️ ACESSO BLOQUEADO: EMAIL NÃO CONFIRMADO\n\nO Supabase exige confirmação de email por padrão.\n\nCOMO RESOLVER:\n1. Verifique sua caixa de entrada e clique no link.\nOU\n2. No painel do Supabase, vá em 'Authentication' > 'Providers' > 'Email' e desmarque 'Confirm email'.");
+      } else {
+         alert("Erro ao entrar: " + error.message);
+      }
       throw error;
     }
     // O useEffect lida com a atualização do estado
@@ -200,11 +204,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (profileError) {
         console.error("Erro ao criar perfil:", profileError);
-        // Se falhar o perfil, seria bom limpar o auth, mas para demo ok
         alert("Conta criada, mas houve um erro ao salvar o perfil. Tente logar.");
       } else {
-        alert("Cadastro realizado com sucesso!");
-        // Auto login is handled by session listener
+        if (!authData.session) {
+            // Se não tem sessão, é porque o Supabase está aguardando confirmação de email
+            alert("✅ Cadastro realizado com sucesso!\n\n⚠️ IMPORTANTE: Um email de confirmação foi enviado. Você precisa confirmar antes de entrar, ou desativar a opção 'Confirm Email' no seu painel Supabase.");
+        } else {
+            alert("Cadastro realizado e login efetuado!");
+        }
       }
     }
   };

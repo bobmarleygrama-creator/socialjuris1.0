@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scale, Shield, Clock, CheckCircle, ChevronRight, Gavel, Users, Lock } from 'lucide-react';
+import { Scale, Shield, Clock, CheckCircle, ChevronRight, Gavel, Users, Lock, Star, ArrowRight, TrendingUp, MessageSquare, Zap, HelpCircle, ChevronDown, Globe, Laptop, Coins } from 'lucide-react';
 import { useApp } from '../store';
 import { UserRole } from '../types';
 
@@ -9,34 +9,43 @@ interface LandingProps {
 
 export const Landing: React.FC<LandingProps> = ({ onAuth }) => {
   const [activeTab, setActiveTab] = useState<'client' | 'lawyer'>('client');
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const toggleFaq = (index: number) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Navbar */}
-      <nav className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-slate-200">
+    <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
+      
+      {/* --- NAVBAR --- */}
+      <nav className="fixed w-full bg-white/90 backdrop-blur-xl z-50 border-b border-slate-100 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-2">
-              <div className="bg-indigo-600 p-2 rounded-lg">
+          <div className="flex justify-between h-20 items-center">
+            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+              <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-2.5 rounded-xl shadow-lg shadow-indigo-200">
                 <Scale className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-900 tracking-tight">SocialJuris</span>
+              <span className="text-2xl font-bold text-slate-900 tracking-tight">SocialJuris</span>
             </div>
-            <div className="hidden md:flex space-x-8 text-sm font-medium text-slate-600">
-              <a href="#funciona" className="hover:text-indigo-600 transition">Como Funciona</a>
-              <a href="#areas" className="hover:text-indigo-600 transition">Áreas</a>
-              <a href="#sobre" className="hover:text-indigo-600 transition">Sobre</a>
+            
+            <div className="hidden lg:flex space-x-10 text-sm font-medium text-slate-600">
+              <a href="#como-funciona" className="hover:text-indigo-600 transition hover:-translate-y-0.5 transform">Como Funciona</a>
+              <a href="#diferenciais" className="hover:text-indigo-600 transition hover:-translate-y-0.5 transform">Diferenciais</a>
+              <a href="#depoimentos" className="hover:text-indigo-600 transition hover:-translate-y-0.5 transform">Depoimentos</a>
+              <a href="#faq" className="hover:text-indigo-600 transition hover:-translate-y-0.5 transform">Dúvidas</a>
             </div>
+
             <div className="flex items-center space-x-4">
               <button 
                 onClick={() => onAuth('login', UserRole.CLIENT)}
-                className="text-slate-600 hover:text-indigo-600 font-medium text-sm"
+                className="hidden md:block text-slate-600 hover:text-indigo-600 font-semibold text-sm px-4 py-2"
               >
                 Entrar
               </button>
               <button 
                 onClick={() => onAuth('register', UserRole.CLIENT)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-full text-sm font-medium transition shadow-lg shadow-indigo-600/20"
+                className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-full text-sm font-bold transition shadow-xl hover:shadow-2xl hover:-translate-y-1"
               >
                 Começar Agora
               </button>
@@ -45,116 +54,391 @@ export const Landing: React.FC<LandingProps> = ({ onAuth }) => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <div className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+      {/* --- HERO SECTION --- */}
+      <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50">
+        {/* Background Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+            <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-indigo-200/30 rounded-full blur-3xl"></div>
+            <div className="absolute top-[20%] -right-[10%] w-[40%] h-[60%] bg-violet-200/30 rounded-full blur-3xl"></div>
+        </div>
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-8 leading-tight">
-              Justiça acessível e <span className="text-indigo-600">inteligente</span> para todos.
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="inline-flex items-center space-x-2 bg-white border border-slate-200 rounded-full px-4 py-1.5 mb-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
+                <span className="text-xs font-semibold text-slate-600 tracking-wide uppercase">Plataforma Digital de Direito</span>
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-8 leading-[1.1]">
+              A revolução do acesso à <br className="hidden md:block"/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">justiça começa aqui.</span>
             </h1>
-            <p className="text-xl text-slate-600 mb-10 leading-relaxed">
-              Conectamos clientes que precisam de solução a advogados verificados prontos para atuar. 
-              Tecnologia de ponta para simplificar o jurídico.
+            
+            <p className="text-xl md:text-2xl text-slate-600 mb-12 leading-relaxed max-w-2xl mx-auto font-light">
+              Conectamos problemas reais a soluções jurídicas. 
+              Publique seu caso por valores populares e encontre advogados qualificados.
             </p>
             
-            <div className="bg-white p-2 rounded-full shadow-xl inline-flex mb-12 border border-slate-100">
+            {/* Toggle Role */}
+            <div className="bg-white p-2 rounded-full shadow-2xl shadow-indigo-100 inline-flex mb-12 border border-slate-100 mx-auto transform transition-all hover:scale-105">
               <button 
                 onClick={() => setActiveTab('client')}
-                className={`px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'client' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 flex items-center ${activeTab === 'client' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'}`}
               >
+                <Users className="w-4 h-4 mr-2" />
                 Sou Cliente
               </button>
               <button 
                 onClick={() => setActiveTab('lawyer')}
-                className={`px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'lawyer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-indigo-600'}`}
+                className={`px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 flex items-center ${activeTab === 'lawyer' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-indigo-600'}`}
               >
+                <Gavel className="w-4 h-4 mr-2" />
                 Sou Advogado
               </button>
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex flex-col md:flex-row justify-center items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
               {activeTab === 'client' ? (
-                <div className="animate-fade-in-up">
-                  <button onClick={() => onAuth('register', UserRole.CLIENT)} className="group bg-slate-900 text-white px-8 py-4 rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center">
-                    Resolver meu Problema <ChevronRight className="ml-2 group-hover:translate-x-1 transition" />
+                <>
+                   <button onClick={() => onAuth('register', UserRole.CLIENT)} className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-1 transition-all flex items-center justify-center">
+                    Cadastrar meu Caso <ArrowRight className="ml-2 w-5 h-5" />
                   </button>
-                  <p className="mt-4 text-sm text-slate-500 flex items-center justify-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" /> Sem custo inicial de cadastro
+                  <p className="text-sm text-slate-500 mt-2 md:mt-0 md:ml-4 flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" /> Taxa simbólica a partir de R$ 2,00
                   </p>
-                </div>
+                </>
               ) : (
-                <div className="animate-fade-in-up">
-                  <button onClick={() => onAuth('register', UserRole.LAWYER)} className="group bg-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center">
-                    Encontrar Clientes <ChevronRight className="ml-2 group-hover:translate-x-1 transition" />
+                <>
+                  <button onClick={() => onAuth('register', UserRole.LAWYER)} className="w-full md:w-auto bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-xl hover:shadow-slate-500/30 hover:-translate-y-1 transition-all flex items-center justify-center">
+                    Ver Oportunidades <ArrowRight className="ml-2 w-5 h-5" />
                   </button>
-                  <p className="mt-4 text-sm text-slate-500 flex items-center justify-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" /> Verificação OAB obrigatória
+                  <p className="text-sm text-slate-500 mt-2 md:mt-0 md:ml-4 flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" /> Expanda sua carteira
                   </p>
-                </div>
+                </>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Features Grid */}
-      <div id="funciona" className="bg-white py-24 border-t border-slate-100">
+      {/* --- STATS BAR (Valor e Segurança) --- */}
+      <div className="bg-slate-900 py-12 border-y border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-12 text-center">
-            <div className="p-8 rounded-2xl bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 transition-all duration-300 shadow-sm hover:shadow-lg">
-              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Shield className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Segurança Total</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Advogados verificados via OAB e dados criptografados. Seu caso em sigilo absoluto até o aceite.
-              </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-slate-800">
+                <div className="p-2">
+                    <div className="flex justify-center mb-3"><Coins className="w-8 h-8 text-white"/></div>
+                    <div className="text-xl font-extrabold text-white mb-1">Valores Populares</div>
+                    <div className="text-indigo-400 text-xs font-medium uppercase tracking-wider">A partir de R$ 2,00</div>
+                </div>
+                <div className="p-2">
+                    <div className="flex justify-center mb-3"><Laptop className="w-8 h-8 text-white"/></div>
+                    <div className="text-xl font-extrabold text-white mb-1">100% Online</div>
+                    <div className="text-indigo-400 text-xs font-medium uppercase tracking-wider">Sem deslocamentos</div>
+                </div>
+                <div className="p-2">
+                    <div className="flex justify-center mb-3"><Shield className="w-8 h-8 text-white"/></div>
+                    <div className="text-xl font-extrabold text-white mb-1">Segurança</div>
+                    <div className="text-indigo-400 text-xs font-medium uppercase tracking-wider">Proteção de Dados</div>
+                </div>
+                <div className="p-2">
+                    <div className="flex justify-center mb-3"><Globe className="w-8 h-8 text-white"/></div>
+                    <div className="text-xl font-extrabold text-white mb-1">Nacional</div>
+                    <div className="text-indigo-400 text-xs font-medium uppercase tracking-wider">Atendimento em todo país</div>
+                </div>
             </div>
-            <div className="p-8 rounded-2xl bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 transition-all duration-300 shadow-sm hover:shadow-lg">
-              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Clock className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Agilidade Digital</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Timeline interativa, chat em tempo real e videochamadas integradas. Sem burocracia de papel.
-              </p>
-            </div>
-            <div className="p-8 rounded-2xl bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 transition-all duration-300 shadow-sm hover:shadow-lg">
-              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Gavel className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Match Inteligente</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Nossa IA analisa seu caso e sugere a área ideal, conectando você ao especialista certo.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
-          <div className="flex items-center space-x-2 mb-4 md:mb-0">
-            <Scale className="h-6 w-6 text-indigo-500" />
-            <span className="text-xl font-bold text-white">SocialJuris</span>
+      {/* --- PROBLEM VS SOLUTION (Diferenciais) --- */}
+      <div id="diferenciais" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+                <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Por que o SocialJuris é diferente?</h2>
+                <p className="text-lg text-slate-600 max-w-2xl mx-auto">Deixamos a burocracia no passado. Trouxemos a advocacia para a era digital.</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+                {/* O jeito antigo */}
+                <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
+                    <h3 className="text-xl font-bold text-slate-500 mb-6 flex items-center"><Clock className="w-5 h-5 mr-2"/> Advocacia Tradicional</h3>
+                    <ul className="space-y-4">
+                        <li className="flex items-start text-slate-500">
+                            <span className="text-red-400 mr-3 text-xl">×</span>
+                            Custos iniciais altos e imprevisíveis.
+                        </li>
+                        <li className="flex items-start text-slate-500">
+                            <span className="text-red-400 mr-3 text-xl">×</span>
+                            Atendimento lento e presencial obrigatório.
+                        </li>
+                        <li className="flex items-start text-slate-500">
+                            <span className="text-red-400 mr-3 text-xl">×</span>
+                            Linguagem difícil e falta de transparência.
+                        </li>
+                        <li className="flex items-start text-slate-500">
+                            <span className="text-red-400 mr-3 text-xl">×</span>
+                            Dificuldade para encontrar especialistas.
+                        </li>
+                    </ul>
+                </div>
+
+                {/* O SocialJuris */}
+                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-3xl shadow-2xl shadow-indigo-200 text-white transform md:scale-105 relative">
+                    <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/30">O FUTURO</div>
+                    <h3 className="text-2xl font-bold mb-6 flex items-center"><Zap className="w-6 h-6 mr-2 fill-yellow-400 text-yellow-400"/> SocialJuris</h3>
+                    <ul className="space-y-4">
+                        <li className="flex items-start">
+                            <CheckCircle className="w-5 h-5 mr-3 text-green-400 mt-0.5 flex-shrink-0" />
+                            <span><span className="font-bold text-green-200">Acessível:</span> Publique seu caso com taxas simbólicas (entre R$ 2 e R$ 6).</span>
+                        </li>
+                        <li className="flex items-start">
+                            <CheckCircle className="w-5 h-5 mr-3 text-green-400 mt-0.5 flex-shrink-0" />
+                            <span><span className="font-bold text-green-200">100% Digital:</span> Chat, envio de documentos e videochamadas na plataforma.</span>
+                        </li>
+                        <li className="flex items-start">
+                            <CheckCircle className="w-5 h-5 mr-3 text-green-400 mt-0.5 flex-shrink-0" />
+                            <span><span className="font-bold text-green-200">Ambiente Profissional:</span> Espaço dedicado exclusivamente a conexões jurídicas sérias.</span>
+                        </li>
+                        <li className="flex items-start">
+                            <CheckCircle className="w-5 h-5 mr-3 text-green-400 mt-0.5 flex-shrink-0" />
+                            <span><span className="font-bold text-green-200">Controle Total:</span> Timeline visual para você saber exatamente o status do seu processo.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      {/* --- HOW IT WORKS (DETAILED) --- */}
+      <div id="como-funciona" className="py-24 bg-slate-50 border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+                <span className="text-indigo-600 font-bold tracking-wider uppercase text-sm">Passo a Passo</span>
+                <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2">Como funciona na prática?</h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-16">
+                {/* Coluna Cliente */}
+                <div>
+                    <div className="flex items-center space-x-3 mb-8">
+                        <div className="bg-slate-900 p-2.5 rounded-lg"><Users className="w-6 h-6 text-white"/></div>
+                        <h3 className="text-2xl font-bold text-slate-900">Para Clientes</h3>
+                    </div>
+                    <div className="space-y-12 relative before:absolute before:left-4 before:top-2 before:h-full before:w-0.5 before:bg-slate-200">
+                        <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-8 h-8 bg-white border-2 border-slate-900 rounded-full flex items-center justify-center font-bold text-slate-900 z-10">1</div>
+                            <h4 className="text-lg font-bold text-slate-900">Relate seu problema</h4>
+                            <p className="text-slate-600 mt-2">Nossa Inteligência Artificial ajuda você a descrever o caso e categoriza a área jurídica correta automaticamente.</p>
+                        </div>
+                        <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-8 h-8 bg-white border-2 border-slate-900 rounded-full flex items-center justify-center font-bold text-slate-900 z-10">2</div>
+                            <h4 className="text-lg font-bold text-slate-900">Validação e Publicação</h4>
+                            <p className="text-slate-600 mt-2">Com o pagamento de uma <strong>taxa simbólica (R$ 2 a R$ 6)</strong>, seu caso é publicado. Isso garante a seriedade da demanda para os advogados.</p>
+                        </div>
+                        <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-8 h-8 bg-white border-2 border-slate-900 rounded-full flex items-center justify-center font-bold text-slate-900 z-10">3</div>
+                            <h4 className="text-lg font-bold text-slate-900">Resolução Digital</h4>
+                            <p className="text-slate-600 mt-2">Advogados qualificados entram em contato. Converse, envie provas, faça videochamadas e acompanhe a resolução.</p>
+                        </div>
+                    </div>
+                    <div className="mt-8 pl-12">
+                        <button onClick={() => onAuth('register', UserRole.CLIENT)} className="text-indigo-600 font-bold hover:underline flex items-center">
+                            Criar minha conta de cliente <ChevronRight className="w-4 h-4 ml-1" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Coluna Advogado */}
+                <div>
+                    <div className="flex items-center space-x-3 mb-8">
+                         <div className="bg-indigo-600 p-2.5 rounded-lg"><Gavel className="w-6 h-6 text-white"/></div>
+                        <h3 className="text-2xl font-bold text-slate-900">Para Advogados</h3>
+                    </div>
+                    <div className="space-y-12 relative before:absolute before:left-4 before:top-2 before:h-full before:w-0.5 before:bg-indigo-100">
+                        <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-8 h-8 bg-white border-2 border-indigo-600 rounded-full flex items-center justify-center font-bold text-indigo-600 z-10">1</div>
+                            <h4 className="text-lg font-bold text-slate-900">Cadastro Profissional</h4>
+                            <p className="text-slate-600 mt-2">Crie seu perfil profissional e insira suas áreas de atuação para receber as demandas certas.</p>
+                        </div>
+                        <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-8 h-8 bg-white border-2 border-indigo-600 rounded-full flex items-center justify-center font-bold text-indigo-600 z-10">2</div>
+                            <h4 className="text-lg font-bold text-slate-900">Clientes Reais e Comprometidos</h4>
+                            <p className="text-slate-600 mt-2">Como os clientes pagam para publicar, você tem acesso a demandas reais e sérias, sem perder tempo com spam.</p>
+                        </div>
+                        <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-8 h-8 bg-white border-2 border-indigo-600 rounded-full flex items-center justify-center font-bold text-indigo-600 z-10">3</div>
+                            <h4 className="text-lg font-bold text-slate-900">Gestão Integrada</h4>
+                            <p className="text-slate-600 mt-2">Gerencie múltiplos clientes em um único dashboard. Histórico, arquivos e chat centralizados.</p>
+                        </div>
+                    </div>
+                    <div className="mt-8 pl-12">
+                        <button onClick={() => onAuth('register', UserRole.LAWYER)} className="text-indigo-600 font-bold hover:underline flex items-center">
+                            Cadastrar como advogado <ChevronRight className="w-4 h-4 ml-1" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      {/* --- TESTIMONIALS --- */}
+      <div id="depoimentos" className="py-24 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-16">O que dizem nossos usuários</h2>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+                <div className="bg-slate-50 p-8 rounded-2xl relative border border-slate-100 hover:shadow-lg transition">
+                    <div className="text-indigo-200 absolute top-4 right-6 text-6xl font-serif">"</div>
+                    <div className="flex text-yellow-400 mb-4"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
+                    <p className="text-slate-700 mb-6 italic relative z-10">"Paguei uma taxa super barata para cadastrar meu caso e valeu muito a pena. O advogado que me atendeu foi extremamente profissional."</p>
+                    <div className="flex items-center">
+                        <img src="https://ui-avatars.com/api/?name=Maria+S&background=random" className="w-10 h-10 rounded-full mr-3" alt="User" />
+                        <div>
+                            <div className="font-bold text-slate-900">Maria Silva</div>
+                            <div className="text-xs text-slate-500">Cliente • Direito Trabalhista</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-slate-50 p-8 rounded-2xl relative border border-slate-100 hover:shadow-lg transition">
+                    <div className="text-indigo-200 absolute top-4 right-6 text-6xl font-serif">"</div>
+                    <div className="flex text-yellow-400 mb-4"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
+                    <p className="text-slate-700 mb-6 italic relative z-10">"A qualidade das leads é superior a outras plataformas. O fato do cliente pagar uma taxa mínima já filtra quem está apenas curioso."</p>
+                    <div className="flex items-center">
+                        <img src="https://ui-avatars.com/api/?name=Dr+Ricardo&background=random" className="w-10 h-10 rounded-full mr-3" alt="User" />
+                        <div>
+                            <div className="font-bold text-slate-900">Dr. Ricardo Oliveira</div>
+                            <div className="text-xs text-slate-500">Advogado • OAB/SP</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-slate-50 p-8 rounded-2xl relative border border-slate-100 hover:shadow-lg transition">
+                    <div className="text-indigo-200 absolute top-4 right-6 text-6xl font-serif">"</div>
+                    <div className="flex text-yellow-400 mb-4"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
+                    <p className="text-slate-700 mb-6 italic relative z-10">"A transparência é o ponto forte. Eu sabia exatamente em que fase meu processo estava só olhando a timeline no celular. Recomendo."</p>
+                    <div className="flex items-center">
+                        <img src="https://ui-avatars.com/api/?name=Fernando+G&background=random" className="w-10 h-10 rounded-full mr-3" alt="User" />
+                        <div>
+                            <div className="font-bold text-slate-900">Fernando Gomes</div>
+                            <div className="text-xs text-slate-500">Cliente • Direito Civil</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      {/* --- FAQ --- */}
+      <div id="faq" className="py-24 bg-slate-50 border-t border-slate-200">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-12">Perguntas Frequentes</h2>
+            
+            <div className="space-y-4">
+                {[
+                    { q: "O cadastro é gratuito?", a: "O cadastro na plataforma é gratuito. Para publicar uma demanda e conectá-la aos advogados, cobramos uma taxa simbólica (entre R$ 2,00 e R$ 6,00). Isso garante a seriedade do pedido e atrai melhores profissionais." },
+                    { q: "Os advogados são confiáveis?", a: "Sim, buscamos criar um ambiente profissional. Todos os advogados precisam informar seu número de registro na OAB para atuar na plataforma." },
+                    { q: "Como funciona o contato?", a: "Após publicar seu caso, ele fica visível para advogados. Quando um profissional aceita o caso, um chat seguro é aberto para vocês conversarem." },
+                    { q: "Posso usar no celular?", a: "Sim, o SocialJuris é 100% responsivo e funciona perfeitamente em smartphones, tablets e computadores." }
+                ].map((item, index) => (
+                    <div key={index} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <button 
+                            onClick={() => toggleFaq(index)}
+                            className="w-full flex justify-between items-center p-6 text-left focus:outline-none hover:bg-slate-50 transition"
+                        >
+                            <span className="font-bold text-slate-800 text-lg">{item.q}</span>
+                            <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} />
+                        </button>
+                        <div className={`overflow-hidden transition-all duration-300 ${openFaq === index ? 'max-h-40 p-6 pt-0' : 'max-h-0'}`}>
+                            <p className="text-slate-600 leading-relaxed">{item.a}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
           </div>
-          <div className="flex space-x-6 text-sm items-center">
-            <a href="#" className="hover:text-white transition">Termos de Uso</a>
-            <a href="#" className="hover:text-white transition">Privacidade</a>
-            <a href="#" className="hover:text-white transition">Contato</a>
-            <span className="text-slate-700">|</span>
-            <button 
-              onClick={() => onAuth('login', UserRole.ADMIN)}
-              className="text-indigo-400 hover:text-white transition font-medium flex items-center"
-            >
-              <Lock className="w-3 h-3 mr-1" />
-              Área Administrativa
-            </button>
+      </div>
+
+      {/* --- FINAL CTA --- */}
+      <div className="py-20 bg-slate-900 text-white text-center">
+          <div className="max-w-4xl mx-auto px-4">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6 tracking-tight">Pronto para resolver seu problema?</h2>
+              <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto">Junte-se a quem já está modernizando sua relação com a justiça.</p>
+              <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                   <button 
+                    onClick={() => onAuth('register', UserRole.CLIENT)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-full text-lg font-bold transition shadow-lg shadow-indigo-900/50 hover:-translate-y-1"
+                   >
+                       Criar Conta e Publicar
+                   </button>
+                   <button 
+                    onClick={() => onAuth('register', UserRole.LAWYER)}
+                    className="bg-transparent border-2 border-slate-600 hover:border-white text-white px-10 py-4 rounded-full text-lg font-bold transition hover:-translate-y-1"
+                   >
+                       Sou Advogado
+                   </button>
+              </div>
           </div>
-          <div className="mt-4 md:mt-0 text-sm text-slate-500">
-            © 2024 SocialJuris. Todos os direitos reservados.
-          </div>
+      </div>
+
+      {/* --- FOOTER --- */}
+      <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div>
+                <div className="flex items-center space-x-2 mb-6">
+                    <Scale className="h-6 w-6 text-indigo-500" />
+                    <span className="text-2xl font-bold text-white">SocialJuris</span>
+                </div>
+                <p className="text-sm leading-relaxed mb-6">
+                    A plataforma líder em conectar clientes a oportunidades jurídicas. Tecnologia a serviço da justiça.
+                </p>
+                <div className="flex space-x-4">
+                    {/* Social Icons Mock */}
+                    <div className="w-8 h-8 bg-slate-800 rounded-full hover:bg-indigo-600 transition cursor-pointer"></div>
+                    <div className="w-8 h-8 bg-slate-800 rounded-full hover:bg-indigo-600 transition cursor-pointer"></div>
+                    <div className="w-8 h-8 bg-slate-800 rounded-full hover:bg-indigo-600 transition cursor-pointer"></div>
+                </div>
+            </div>
+            
+            <div>
+                <h4 className="text-white font-bold mb-6">Plataforma</h4>
+                <ul className="space-y-3 text-sm">
+                    <li><a href="#" className="hover:text-indigo-400 transition">Para Clientes</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Para Advogados</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Preços</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Segurança</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 className="text-white font-bold mb-6">Empresa</h4>
+                <ul className="space-y-3 text-sm">
+                    <li><a href="#" className="hover:text-indigo-400 transition">Sobre Nós</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Carreiras</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Blog</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Contato</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 className="text-white font-bold mb-6">Legal</h4>
+                <ul className="space-y-3 text-sm">
+                    <li><a href="#" className="hover:text-indigo-400 transition">Termos de Uso</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Política de Privacidade</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Compliance</a></li>
+                    <li className="pt-4">
+                        <button 
+                        onClick={() => onAuth('login', UserRole.ADMIN)}
+                        className="text-indigo-500 hover:text-white transition font-medium flex items-center text-xs border border-indigo-900/50 px-3 py-1.5 rounded-lg bg-indigo-950/20"
+                        >
+                        <Lock className="w-3 h-3 mr-1.5" />
+                        Área Administrativa
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 border-t border-slate-900 text-center text-sm">
+            © 2024 SocialJuris Tecnologia Jurídica Ltda. Todos os direitos reservados.
         </div>
       </footer>
     </div>
