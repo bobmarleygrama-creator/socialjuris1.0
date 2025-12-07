@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification, StrategyAnalysis, CalculationResult, CalculatorType, CalculationLineItem } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock, Eye, XCircle, Hammer, LayoutGrid, PieChart, ChevronRight, Copy, Printer, BookOpen, Download, RefreshCw, ChevronDown, GraduationCap, Heart, Landmark, BriefcaseBusiness, FileSpreadsheet } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock, Eye, XCircle, Hammer, LayoutGrid, PieChart, ChevronRight, Copy, Printer, BookOpen, Download, RefreshCw, ChevronDown, GraduationCap, Heart, Landmark, BriefcaseBusiness, FileSpreadsheet, Home, Gavel, ShoppingBag } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription, calculateCasePrice, analyzeOpposingStrategy, calculateLegalAdjustment } from '../services/geminiService';
 
@@ -341,10 +341,12 @@ const StrategyAnalyzer: React.FC<{ isPremium: boolean, onUnlock: () => void }> =
 const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = ({ isPremium, onUnlock }) => {
     const [calcType, setCalcType] = useState<CalculatorType>('CIVIL');
     
-    // STATE - CIVIL
-    const [amount, setAmount] = useState(10000);
+    // GENERIC
     const [startDate, setStartDate] = useState('2022-01-01');
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // STATE - CIVIL
+    const [amount, setAmount] = useState(10000);
     const [index, setIndex] = useState('IGPM');
     const [interestRate, setInterestRate] = useState(1);
     const [applyFineArt523, setApplyFineArt523] = useState(false);
@@ -355,8 +357,29 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
     const [laborReason, setLaborReason] = useState('NO_CAUSE');
     const [fgtsBalance, setFgtsBalance] = useState(0);
 
+    // STATE - TAX
+    const [amountPaid, setAmountPaid] = useState(5000);
+    const [paymentDate, setPaymentDate] = useState('2023-01-01');
+    const [taxType, setTaxType] = useState('FEDERAL');
+
     // STATE - FAMILY
+    const [monthlyAlimony, setMonthlyAlimony] = useState(1200);
     const [includeThirteenth, setIncludeThirteenth] = useState(true);
+    const [extraExpenses, setExtraExpenses] = useState(0);
+
+    // STATE - CRIMINAL (NEW)
+    const [sentenceYears, setSentenceYears] = useState(5);
+    const [sentenceMonths, setSentenceMonths] = useState(4);
+    const [crimeType, setCrimeType] = useState('NON_VIOLENT');
+    const [isRecidivist, setIsRecidivist] = useState(false);
+
+    // STATE - RENT (NEW)
+    const [currentRent, setCurrentRent] = useState(2500);
+    const [monthsAccumulated, setMonthsAccumulated] = useState(12);
+
+    // STATE - CONSUMER (NEW)
+    const [chargedValue, setChargedValue] = useState(150);
+    const [isBadFaith, setIsBadFaith] = useState(true);
 
     const [result, setResult] = useState<CalculationResult | null>(null);
     const [loading, setLoading] = useState(false);
@@ -364,17 +387,24 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
     const handleCalculate = async () => {
         setLoading(true);
         const params = {
-            amount: calcType === 'LABOR' ? 0 : amount,
-            salary,
-            startDate,
-            endDate,
-            index,
-            interestRate,
-            applyFineArt523,
-            honorariaPercent,
-            reason: laborReason,
-            fgtsBalance,
-            includeThirteenth
+            // General
+            startDate, endDate,
+            // Civil
+            amount, index, interestRate, applyFineArt523, honorariaPercent,
+            // Labor
+            salary, reason: laborReason, fgtsBalance,
+            // Tax
+            amountPaid, taxType,
+            // Family
+            monthlyAlimony, includeThirteenth, extraExpenses,
+            // Criminal
+            sentenceYears, sentenceMonths, crimeType, isRecidivist,
+            // Rent
+            currentRent, indexType: index, monthsAccumulated, // Recicla 'index' para tipo do aluguel
+            // Consumer
+            chargedValue, isBadFaith,
+            // Shared (Tax & Consumer)
+            paymentDate
         };
         
         const res = await calculateLegalAdjustment(calcType, params);
@@ -384,10 +414,14 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
 
     const getTypeDetails = () => {
         switch(calcType) {
-            case 'CIVIL': return { icon: Scale, label: 'Cível (Cumprimento de Sentença)', color: 'indigo' };
-            case 'LABOR': return { icon: BriefcaseBusiness, label: 'Trabalhista (Liquidação)', color: 'orange' };
+            case 'CIVIL': return { icon: Scale, label: 'Cível (Sentença)', color: 'indigo' };
+            case 'LABOR': return { icon: BriefcaseBusiness, label: 'Trabalhista (Rescisão)', color: 'orange' };
             case 'TAX': return { icon: Landmark, label: 'Tributário (Repetição)', color: 'blue' };
-            case 'FAMILY': return { icon: Heart, label: 'Família (Pensão)', color: 'pink' };
+            case 'FAMILY': return { icon: Heart, label: 'Família (Alimentos)', color: 'pink' };
+            case 'CRIMINAL': return { icon: Gavel, label: 'Penal (Progressão)', color: 'red' };
+            case 'RENT': return { icon: Home, label: 'Imobiliário (Aluguel)', color: 'emerald' };
+            case 'CONSUMER': return { icon: ShoppingBag, label: 'Consumidor (Indébito)', color: 'purple' };
+            default: return { icon: Scale, label: 'Geral', color: 'slate' };
         }
     };
 
@@ -398,20 +432,22 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
             {!isPremium && <PremiumLockOverlay onUnlock={onUnlock} />}
             
             {/* TABS DE SELEÇÃO DE CÁLCULO */}
-            <div className={`flex space-x-1 mb-6 p-1 bg-white border border-slate-200 rounded-xl inline-flex ${!isPremium ? 'opacity-30' : ''}`}>
-                {(['CIVIL', 'LABOR', 'TAX', 'FAMILY'] as CalculatorType[]).map(t => (
-                    <button
-                        key={t}
-                        onClick={() => { setCalcType(t); setResult(null); }}
-                        className={`px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center ${
-                            calcType === t 
-                            ? 'bg-slate-900 text-white shadow-md' 
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                        }`}
-                    >
-                        {t === 'CIVIL' ? 'Cível' : t === 'LABOR' ? 'Trabalhista' : t === 'TAX' ? 'Tributário' : 'Família'}
-                    </button>
-                ))}
+            <div className={`mb-6 overflow-x-auto pb-2 ${!isPremium ? 'opacity-30' : ''}`}>
+                <div className="flex space-x-2 bg-white border border-slate-200 p-1 rounded-xl inline-flex min-w-max">
+                    {(['CIVIL', 'LABOR', 'TAX', 'FAMILY', 'CRIMINAL', 'RENT', 'CONSUMER'] as CalculatorType[]).map(t => (
+                        <button
+                            key={t}
+                            onClick={() => { setCalcType(t); setResult(null); }}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center whitespace-nowrap ${
+                                calcType === t 
+                                ? 'bg-slate-900 text-white shadow-md' 
+                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                        >
+                            {t === 'CIVIL' ? 'Cível' : t === 'LABOR' ? 'Trabalhista' : t === 'TAX' ? 'Tributário' : t === 'FAMILY' ? 'Família' : t === 'CRIMINAL' ? 'Penal' : t === 'RENT' ? 'Aluguel' : 'Consumidor'}
+                        </button>
+                    ))}
+                </div>
             </div>
             
             <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${!isPremium ? 'opacity-30 pointer-events-none' : ''}`}>
@@ -420,13 +456,94 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                  <div className="lg:col-span-4 bg-white p-6 rounded-xl border border-slate-300 h-full">
                      <div className={`flex items-center justify-between mb-6 border-b border-slate-100 pb-4`}>
                          <h3 className={`font-bold text-slate-900 flex items-center`}>
-                             <Settings className={`w-5 h-5 mr-2 text-slate-500`}/> 
+                             <typeDetails.icon className={`w-5 h-5 mr-2 text-slate-500`}/> 
                              Parâmetros
                          </h3>
                          <span className={`text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded font-bold uppercase`}>{typeDetails.label}</span>
                      </div>
                      
                      <div className="space-y-4">
+                         
+                         {/* --- INPUTS CRIMINAL --- */}
+                         {calcType === 'CRIMINAL' && (
+                             <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Anos Pena</label>
+                                        <input type="number" value={sentenceYears} onChange={e => setSentenceYears(Number(e.target.value))} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Meses Pena</label>
+                                        <input type="number" value={sentenceMonths} onChange={e => setSentenceMonths(Number(e.target.value))} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded text-sm"/>
+                                    </div>
+                                </div>
+                                <div>
+                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Tipo de Crime</label>
+                                     <select value={crimeType} onChange={e => setCrimeType(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-300 rounded text-sm outline-none">
+                                        <option value="NON_VIOLENT">Sem Violência (Comum)</option>
+                                        <option value="VIOLENT">Com Violência / Grave Ameaça</option>
+                                        <option value="HEDIOUS">Hediondo / Equiparado</option>
+                                     </select>
+                                </div>
+                                <div className="pt-2">
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" checked={isRecidivist} onChange={e => setIsRecidivist(e.target.checked)} className="rounded text-red-600 focus:ring-red-500"/>
+                                        <span className="text-sm text-slate-700">Réu Reincidente?</span>
+                                    </label>
+                                </div>
+                             </div>
+                         )}
+
+                         {/* --- INPUTS RENT (ALUGUEL) --- */}
+                         {calcType === 'RENT' && (
+                             <div className="space-y-4">
+                                <div>
+                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Aluguel Atual</label>
+                                     <div className="relative">
+                                         <span className="absolute left-3 top-2.5 text-slate-500 font-bold text-sm">R$</span>
+                                         <input type="number" value={currentRent} onChange={e => setCurrentRent(Number(e.target.value))} className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded focus:ring-1 focus:ring-slate-400 outline-none text-sm font-semibold"/>
+                                     </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Índice Contratual</label>
+                                    <select value={index} onChange={e => setIndex(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-300 rounded text-sm outline-none">
+                                        <option value="IGPM">IGP-M (FGV)</option>
+                                        <option value="IPCA">IPCA (IBGE)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Meses Acumulados</label>
+                                    <input type="number" value={monthsAccumulated} onChange={e => setMonthsAccumulated(Number(e.target.value))} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded text-sm" placeholder="Ex: 12"/>
+                                </div>
+                             </div>
+                         )}
+
+                         {/* --- INPUTS CONSUMER (CDC) --- */}
+                         {calcType === 'CONSUMER' && (
+                             <div className="space-y-4">
+                                <div>
+                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Valor Cobrado Indevidamente</label>
+                                     <div className="relative">
+                                         <span className="absolute left-3 top-2.5 text-slate-500 font-bold text-sm">R$</span>
+                                         <input type="number" value={chargedValue} onChange={e => setChargedValue(Number(e.target.value))} className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded focus:ring-1 focus:ring-slate-400 outline-none text-sm font-semibold"/>
+                                     </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Data do Pagamento</label>
+                                    <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded text-sm"/>
+                                </div>
+                                <div className="pt-2">
+                                    <label className="flex items-center space-x-2 cursor-pointer bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                        <input type="checkbox" checked={isBadFaith} onChange={e => setIsBadFaith(e.target.checked)} className="rounded text-purple-600 focus:ring-purple-500"/>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-700">Devolução em Dobro</span>
+                                            <span className="text-[10px] text-slate-400">Art. 42 CDC - Má-fé ou Erro injustificável</span>
+                                        </div>
+                                    </label>
+                                </div>
+                             </div>
+                         )}
+
                          {/* --- INPUTS TRABALHISTAS --- */}
                          {calcType === 'LABOR' && (
                              <>
@@ -465,8 +582,80 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                              </>
                          )}
 
-                         {/* --- INPUTS CÍVEIS / OUTROS --- */}
-                         {calcType !== 'LABOR' && (
+                         {/* --- INPUTS TRIBUTÁRIOS (SELIC) --- */}
+                         {calcType === 'TAX' && (
+                             <div className="space-y-4">
+                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-xs text-blue-800">
+                                    <p className="font-bold mb-1">Regra de Correção:</p>
+                                    Os tributos federais são corrigidos exclusivamente pela taxa SELIC acumulada (Lei 9.250/95), sem juros moratórios adicionais.
+                                </div>
+                                <div>
+                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Valor do Pagamento Indevido</label>
+                                     <div className="relative">
+                                         <span className="absolute left-3 top-2.5 text-slate-500 font-bold text-sm">R$</span>
+                                         <input type="number" value={amountPaid} onChange={e => setAmountPaid(Number(e.target.value))} className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded focus:ring-1 focus:ring-slate-400 outline-none text-sm font-semibold"/>
+                                     </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Data do Pagamento</label>
+                                    <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded text-sm"/>
+                                </div>
+                                <div>
+                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Esfera Tributária</label>
+                                     <select value={taxType} onChange={e => setTaxType(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-300 rounded text-sm outline-none">
+                                        <option value="FEDERAL">Federal (SELIC)</option>
+                                        <option value="STATE">Estadual (IPCA + Juros)</option>
+                                     </select>
+                                </div>
+                             </div>
+                         )}
+
+                         {/* --- INPUTS FAMÍLIA (PENSÃO) --- */}
+                         {calcType === 'FAMILY' && (
+                             <div className="space-y-4">
+                                <div>
+                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Valor da Parcela Mensal</label>
+                                     <div className="relative">
+                                         <span className="absolute left-3 top-2.5 text-slate-500 font-bold text-sm">R$</span>
+                                         <input type="number" value={monthlyAlimony} onChange={e => setMonthlyAlimony(Number(e.target.value))} className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded focus:ring-1 focus:ring-slate-400 outline-none text-sm font-semibold"/>
+                                     </div>
+                                     <p className="text-[10px] text-slate-400 mt-1">O cálculo considerará a soma das parcelas vencidas no período.</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Início da Dívida</label>
+                                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Data Final</label>
+                                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded text-sm"/>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-2 pt-2 border-t border-slate-100">
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" checked={includeThirteenth} onChange={e => setIncludeThirteenth(e.target.checked)} className="rounded text-pink-600 focus:ring-pink-500"/>
+                                        <span className="text-sm text-slate-700">Incide sobre 13º e Férias?</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" checked={applyFineArt523} onChange={e => setApplyFineArt523(e.target.checked)} className="rounded text-pink-600 focus:ring-pink-500"/>
+                                        <span className="text-sm text-slate-700">Aplicar Multa 10% (Art. 523 CPC)</span>
+                                    </label>
+                                </div>
+
+                                <div>
+                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Despesas Extras (Médico/Escola)</label>
+                                     <div className="relative">
+                                         <span className="absolute left-3 top-2.5 text-slate-500 font-bold text-sm">R$</span>
+                                         <input type="number" value={extraExpenses} onChange={e => setExtraExpenses(Number(e.target.value))} className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded focus:ring-1 focus:ring-slate-400 outline-none text-sm"/>
+                                     </div>
+                                     <p className="text-[10px] text-slate-400 mt-1">Valor total de despesas a serem partilhadas.</p>
+                                </div>
+                             </div>
+                         )}
+
+                         {/* --- INPUTS CÍVEIS (GENÉRICO) --- */}
+                         {calcType === 'CIVIL' && (
                              <>
                                 <div>
                                      <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Valor Original (Principal)</label>
@@ -525,16 +714,6 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                                 </div>
                              </div>
                          )}
-
-                         {/* --- CONFIGURAÇÕES FAMÍLIA --- */}
-                         {calcType === 'FAMILY' && (
-                             <div className="pt-2">
-                                 <label className="flex items-center space-x-2 cursor-pointer">
-                                     <input type="checkbox" checked={includeThirteenth} onChange={e => setIncludeThirteenth(e.target.checked)} className="rounded text-pink-600 focus:ring-pink-500"/>
-                                     <span className="text-sm text-slate-700">Incluir reflexo em 13º Salário</span>
-                                 </label>
-                             </div>
-                         )}
                          
                          <div className="pt-6 mt-auto">
                             <button 
@@ -542,7 +721,7 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                                 disabled={loading}
                                 className={`w-full bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition flex items-center justify-center shadow-lg text-sm uppercase tracking-wide`}
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Calcular Liquidação'}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Calcular'}
                             </button>
                          </div>
                      </div>
@@ -576,9 +755,9 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b-2 border-slate-200">
-                                            <th className="text-left py-3 font-bold text-slate-600 uppercase text-xs">Descrição da Verba</th>
+                                            <th className="text-left py-3 font-bold text-slate-600 uppercase text-xs">Descrição</th>
                                             <th className="text-right py-3 font-bold text-slate-600 uppercase text-xs w-32">Detalhes/Ref</th>
-                                            <th className="text-right py-3 font-bold text-slate-600 uppercase text-xs w-40">Valor (R$)</th>
+                                            <th className="text-right py-3 font-bold text-slate-600 uppercase text-xs w-40">Resultado</th>
                                         </tr>
                                     </thead>
                                     <tbody className="font-mono text-slate-700">
@@ -586,7 +765,12 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                                             <tr key={idx} className={`border-b border-slate-100 hover:bg-slate-50 ${item.isTotal ? 'bg-slate-50 font-bold text-slate-900 text-base border-t-2 border-slate-300' : ''}`}>
                                                 <td className="py-3 pr-4">{item.description}</td>
                                                 <td className="py-3 text-right text-xs text-slate-500">{item.details || '-'}</td>
-                                                <td className="py-3 text-right">{item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                <td className="py-3 text-right">
+                                                    {item.unit === '%' ? `${item.value.toFixed(2)}%` : 
+                                                     item.unit === 'Dias' || item.unit === 'Dias Totais' ? item.value : 
+                                                     item.unit === 'Tempo' ? '' :
+                                                     item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -596,11 +780,15 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                             {/* RODAPÉ RESUMO */}
                             <div className="bg-slate-900 text-white p-6 flex justify-between items-center">
                                 <div>
-                                    <p className="text-slate-400 text-xs font-bold uppercase">Valor Final da Execução</p>
-                                    <p className="text-xs text-slate-500">Sujeito a conferência judicial</p>
+                                    <p className="text-slate-400 text-xs font-bold uppercase">
+                                        {calcType === 'CRIMINAL' ? 'Tempo para Progressão' : 'Valor Total Final'}
+                                    </p>
+                                    <p className="text-xs text-slate-500">Conferência Recomendada</p>
                                 </div>
                                 <div className="text-3xl font-bold font-mono">
-                                    R$ {result.updatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {typeof result.updatedValue === 'number' 
+                                        ? `R$ ${result.updatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                        : result.updatedValue}
                                 </div>
                             </div>
                          </div>

@@ -85,26 +85,27 @@ export interface StrategyAnalysis {
 
 // --- TIPOS AVANÇADOS PARA CALCULADORA FORENSE ---
 
-export type CalculatorType = 'CIVIL' | 'LABOR' | 'TAX' | 'FAMILY';
+export type CalculatorType = 'CIVIL' | 'LABOR' | 'TAX' | 'FAMILY' | 'CRIMINAL' | 'RENT' | 'CONSUMER';
 
 export interface CalculationLineItem {
   description: string; // Ex: "Principal Corrigido", "Juros Moratórios (1% a.m)"
-  value: number; // Valor final da linha
+  value: number; // Valor final da linha ou Quantidade de Dias (para Penal)
   details?: string; // Ex: "R$ 10.000 x 1.05 (IGPM)"
   isTotal?: boolean; // Se é uma linha de soma
   isDeduction?: boolean; // Se é um desconto
+  unit?: string; // 'R$' ou 'Dias/Anos'
 }
 
 export interface CalculationResult {
   type: CalculatorType;
   
-  // Resumo Financeiro
-  originalValue: number;
-  updatedValue: number;
+  // Resumo Financeiro ou Temporal
+  originalValue: number | string; // Pode ser valor R$ ou string de tempo "5 anos"
+  updatedValue: number | string;
   
   // Metadados Processuais
   indexUsed?: string;
-  timeInMonths: number;
+  timeInMonths?: number;
   
   // Memória de Cálculo (Tabela Detalhada)
   memoryGrid: CalculationLineItem[];

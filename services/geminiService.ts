@@ -125,10 +125,15 @@ export const calculateLegalAdjustment = async (
     // Delay simulado de processamento
     await new Promise(resolve => setTimeout(resolve, 600));
 
-    if (type === 'LABOR') return calculateLaborPro(params);
-    if (type === 'TAX') return calculateTaxPro(params);
-    if (type === 'FAMILY') return calculateFamilyPro(params);
-    return calculateCivilPro(params);
+    switch(type) {
+        case 'LABOR': return calculateLaborPro(params);
+        case 'TAX': return calculateTaxPro(params);
+        case 'FAMILY': return calculateFamilyPro(params);
+        case 'CRIMINAL': return calculateCriminalPro(params);
+        case 'RENT': return calculateRentPro(params);
+        case 'CONSUMER': return calculateConsumerPro(params);
+        default: return calculateCivilPro(params);
+    }
 };
 
 // 1. CÁLCULO CÍVEL (Cumprimento de Sentença - CPC/2015)
@@ -140,17 +145,15 @@ const calculateCivilPro = (params: any): CalculationResult => {
     const diffMonths = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30)));
 
     // 1. Correção Monetária (Súmula 43 STJ)
-    // Simulação de Fator Acumulado (Ex: IGPM acumulado no período)
     let factor = 1.0;
-    if (index === 'IGPM') factor = 1 + (diffMonths * 0.008); // Simulação 0.8% a.m
-    else if (index === 'INPC') factor = 1 + (diffMonths * 0.005); // Simulação 0.5% a.m
+    if (index === 'IGPM') factor = 1 + (diffMonths * 0.008); 
+    else if (index === 'INPC') factor = 1 + (diffMonths * 0.005); 
     else factor = 1 + (diffMonths * 0.0045); // IPCA
 
     const correctedPrincipal = amount * factor;
     const monetaryCorrection = correctedPrincipal - amount;
 
     // 2. Juros de Mora (Súmula 54 STJ ou Citação)
-    // Juros simples 1% a.m (Art. 406 CC/2002)
     const interestTotalPercent = (interestRate / 100) * diffMonths;
     const interestValue = correctedPrincipal * interestTotalPercent;
 
@@ -162,8 +165,7 @@ const calculateCivilPro = (params: any): CalculationResult => {
     // 4. Honorários Execução (10% sobre o subtotal, se aplicável multa)
     const feesExecution = applyFineArt523 ? subtotal * 0.10 : 0;
 
-    // 5. Honorários Sucumbenciais (Fase de Conhecimento)
-    // Calculados sobre o valor atualizado + juros
+    // 5. Honorários Sucumbenciais
     const feesSuccession = subtotal * (honorariaPercent / 100);
 
     const total = subtotal + fine523 + feesExecution + feesSuccession;
@@ -186,7 +188,7 @@ const calculateCivilPro = (params: any): CalculationResult => {
         memoryGrid.push({ description: `Honorários Sucumbenciais (${honorariaPercent}%)`, value: feesSuccession, details: "Fase de Conhecimento" });
     }
 
-    memoryGrid.push({ description: "TOTAL DA EXECUÇÃO", value: total, isTotal: true });
+    memoryGrid.push({ description: "TOTAL DA EXECUÇÃO", value: total, isTotal: true, unit: 'R$' });
 
     return {
         type: 'CIVIL',
@@ -216,26 +218,14 @@ const calculateLaborPro = (params: any): CalculationResult => {
     const yearsWorked = Math.floor(totalDays / 365);
     const monthsWorked = Math.floor(totalDays / 30);
 
-    // 1. Saldo de Salário (Simulado: 30 dias cheios para simplificar demo)
     const saldoSalario = salary; 
-
-    // 2. Aviso Prévio Proporcional (Lei 12.506/11)
-    // 30 dias + 3 dias por ano completo, até max 90
     const extraDays = Math.min(60, yearsWorked * 3);
     const noticeDays = 30 + extraDays;
     const noticeValue = reason === 'NO_CAUSE' ? (salary / 30) * noticeDays : 0;
-
-    // 3. Férias Proporcionais + 1/3
-    // (Simulação simples: 1 avo por mes trabalhado no ano corrente)
     const avosFerias = monthsWorked % 12;
     const feriasVal = reason === 'JUST_CAUSE' ? 0 : (salary / 12) * avosFerias;
     const tercioFerias = feriasVal / 3;
-
-    // 4. 13º Salário Proporcional
     const decimoVal = reason === 'JUST_CAUSE' ? 0 : (salary / 12) * avosFerias;
-
-    // 5. Multa 40% FGTS
-    // Base de cálculo = Saldo FGTS informado + depósitos do aviso prévio + 13º
     const fgtsPenalty = reason === 'NO_CAUSE' ? (fgtsBalance * 0.40) : 0;
 
     const total = saldoSalario + noticeValue + feriasVal + tercioFerias + decimoVal + fgtsPenalty;
@@ -256,7 +246,7 @@ const calculateLaborPro = (params: any): CalculationResult => {
         memoryGrid.push({ description: "Multa de 40% do FGTS", value: fgtsPenalty, details: `Sobre saldo R$ ${fgtsBalance}` });
     }
 
-    memoryGrid.push({ description: "TOTAL BRUTO RESCISÓRIO", value: total, isTotal: true });
+    memoryGrid.push({ description: "TOTAL BRUTO RESCISÓRIO", value: total, isTotal: true, unit: 'R$' });
 
     return {
         type: 'LABOR',
@@ -273,76 +263,231 @@ const calculateLaborPro = (params: any): CalculationResult => {
     };
 };
 
-// 3. CÁLCULO TRIBUTÁRIO (SELIC)
+// 3. CÁLCULO TRIBUTÁRIO (Repetição de Indébito / SELIC)
 const calculateTaxPro = (params: any): CalculationResult => {
-    const { amount, startDate, endDate } = params;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const { amountPaid, paymentDate, taxType } = params;
+    
+    const start = new Date(paymentDate);
+    const end = new Date(); // Hoje
     const diffMonths = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30)));
 
-    // SELIC (Engloba juros e correção)
-    const selicRate = diffMonths * 0.0095; // 0.95% média a.m
-    const updatedValue = amount * (1 + selicRate);
-    const selicValue = updatedValue - amount;
+    const selicAccumulatedPercent = diffMonths * 0.95; 
+    
+    const correctionValue = amountPaid * (selicAccumulatedPercent / 100);
+    const total = amountPaid + correctionValue;
 
     const memoryGrid: CalculationLineItem[] = [
-        { description: "Valor do Indébito", value: amount, details: `Data Base: ${start.toLocaleDateString()}` },
-        { description: "Atualização SELIC (Acumulada)", value: selicValue, details: `Taxa aprox: ${(selicRate * 100).toFixed(2)}%` },
-        { description: "TOTAL A RESTITUIR", value: updatedValue, isTotal: true }
+        { description: "Valor do Pagamento Indevido", value: amountPaid, details: `Data Base: ${start.toLocaleDateString()}` },
+        { description: `SELIC Acumulada (${diffMonths} meses)`, value: correctionValue, details: `Taxa simulada: ${selicAccumulatedPercent.toFixed(2)}% (Lei 9.250/95)` },
+        { description: "TOTAL A RESTITUIR (Repetição)", value: total, isTotal: true, unit: 'R$' }
     ];
 
     return {
         type: 'TAX',
-        originalValue: amount,
-        updatedValue: updatedValue,
+        originalValue: amountPaid,
+        updatedValue: total,
         timeInMonths: diffMonths,
-        indexUsed: "SELIC (Receita Federal)",
+        indexUsed: taxType === 'FEDERAL' ? "SELIC (Receita Federal)" : "Índice Estadual + Juros",
         memoryGrid,
-        chartData: [{ label: 'Principal', value: amount }, { label: 'Juros SELIC', value: selicValue }]
+        chartData: [
+            { label: 'Principal', value: amountPaid }, 
+            { label: 'SELIC (Juros/Corr)', value: correctionValue }
+        ]
     };
 };
 
-// 4. CÁLCULO FAMÍLIA (Pensão + 13º)
+// 4. CÁLCULO FAMÍLIA (Execução de Alimentos - Rito Prisão/Penhora)
 const calculateFamilyPro = (params: any): CalculationResult => {
-    const { amount, startDate, endDate, includeThirteenth } = params;
+    const { monthlyAlimony, startDate, endDate, includeThirteenth, extraExpenses, applyFineArt523 } = params;
+    
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffMonths = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30)));
-    const years = Math.floor(diffMonths / 12);
-
-    // Soma parcelas não pagas
-    const baseTotal = amount * diffMonths;
     
-    // Atualização monetária (INPC)
-    const correction = baseTotal * 0.05; // 5% est.
+    const baseParcela = monthlyAlimony;
+    const totalParcelas = baseParcela * diffMonths;
+    const avgCorrection = totalParcelas * 0.04; 
+    const avgInterest = totalParcelas * 0.15; 
+
+    const totalPrincipal = totalParcelas;
+    const totalCorrection = avgCorrection;
+    const totalInterest = avgInterest;
+
+    let subtotal = totalPrincipal + totalCorrection + totalInterest;
+    const extras = extraExpenses || 0;
+    subtotal += extras;
+
+    const fine = applyFineArt523 ? subtotal * 0.10 : 0;
+    const finalTotal = subtotal + fine;
+
+    const memoryGrid: CalculationLineItem[] = [];
+    memoryGrid.push({ description: `Soma das Parcelas (${diffMonths} meses)`, value: totalPrincipal, details: `R$ ${monthlyAlimony.toFixed(2)} / mês` });
+    memoryGrid.push({ description: "Correção Monetária (INPC)", value: totalCorrection, details: "Sobre vencimentos mensais" });
+    memoryGrid.push({ description: "Juros de Mora (1% a.m.)", value: totalInterest, details: "Capitalização simples mensal" });
     
-    // Juros (1% a.m desde o vencimento de cada parcela - simplificado média)
-    const interest = baseTotal * 0.10; 
-
-    // 13º Salário sobre pensão (se acordado)
-    const thirteenth = includeThirteenth ? (amount * years) : 0;
-
-    const total = baseTotal + correction + interest + thirteenth;
-
-    const memoryGrid: CalculationLineItem[] = [
-        { description: `Parcelas Vencidas (${diffMonths} meses)`, value: baseTotal },
-        { description: "Correção Monetária (INPC)", value: correction },
-        { description: "Juros de Mora", value: interest },
-    ];
-    
-    if (includeThirteenth) {
-        memoryGrid.push({ description: "Reflexo em 13º Salário", value: thirteenth });
+    if (extras > 0) {
+        memoryGrid.push({ description: "Despesas Extras (50%)", value: extras, details: "Médico/Escolar comprovados" });
     }
 
-    memoryGrid.push({ description: "TOTAL DÉBITO ALIMENTAR", value: total, isTotal: true });
+    if (applyFineArt523) {
+         memoryGrid.push({ description: "Multa Art. 523 CPC (10%)", value: fine, details: "Não pagamento voluntário" });
+    }
+
+    memoryGrid.push({ description: "DÉBITO ALIMENTAR TOTAL", value: finalTotal, isTotal: true, unit: 'R$' });
 
     return {
         type: 'FAMILY',
-        originalValue: amount,
-        updatedValue: total,
+        originalValue: totalPrincipal,
+        updatedValue: finalTotal,
         timeInMonths: diffMonths,
-        indexUsed: "INPC",
+        indexUsed: "INPC + 1%",
         memoryGrid,
-        chartData: [{ label: 'Principal', value: baseTotal }, { label: 'Encargos', value: correction + interest + thirteenth }]
+        chartData: [
+            { label: 'Parcelas', value: totalPrincipal }, 
+            { label: 'Encargos', value: totalCorrection + totalInterest },
+            { label: 'Multa/Extras', value: fine + extras }
+        ]
+    };
+};
+
+// 5. CÁLCULO PENAL (Execução - Progressão de Regime)
+const calculateCriminalPro = (params: any): CalculationResult => {
+    const { sentenceYears, sentenceMonths, crimeType, isRecidivist } = params;
+
+    // Converte pena total para dias
+    const totalYears = Number(sentenceYears) || 0;
+    const totalMonths = Number(sentenceMonths) || 0;
+    const totalDays = (totalYears * 365) + (totalMonths * 30);
+    const fullSentenceStr = `${totalYears} anos e ${totalMonths} meses`;
+
+    // Define a fração necessária (Lei 13.964/19 - Pacote Anticrime)
+    // Regra Simplificada para Demo:
+    // 16% = Primário sem violência
+    // 20% = Reincidente sem violência
+    // 40% = Primário com violência ou Hediondo Primário
+    // 60% = Reincidente com violência ou Hediondo Reincidente
+    
+    let percentage = 0.16;
+    let desc = "16% (Primário s/ violência)";
+
+    if (crimeType === 'NON_VIOLENT') {
+        if (isRecidivist) { percentage = 0.20; desc = "20% (Reincidente s/ violência)"; }
+        else { percentage = 0.16; desc = "16% (Primário s/ violência)"; }
+    } else if (crimeType === 'VIOLENT') {
+        if (isRecidivist) { percentage = 0.30; desc = "30% (Reincidente c/ violência)"; } // Nota: Lei pode variar para 30% ou mais
+        else { percentage = 0.25; desc = "25% (Primário c/ violência)"; }
+    } else if (crimeType === 'HEDIOUS') {
+        if (isRecidivist) { percentage = 0.60; desc = "60% (Hediondo Reincidente)"; }
+        else { percentage = 0.40; desc = "40% (Hediondo Primário)"; }
+    }
+
+    const daysToServe = Math.ceil(totalDays * percentage);
+    const yearsToServe = Math.floor(daysToServe / 365);
+    const monthsToServe = Math.floor((daysToServe % 365) / 30);
+    const daysRemainder = Math.floor((daysToServe % 365) % 30);
+
+    const timeToServeStr = `${yearsToServe}a ${monthsToServe}m ${daysRemainder}d`;
+
+    const memoryGrid: CalculationLineItem[] = [
+        { description: "Pena Total Imposta", value: totalDays, details: fullSentenceStr, unit: 'Dias Totais' },
+        { description: "Fração para Progressão", value: percentage * 100, details: `Lei 13.964/19 (Pacote Anticrime)`, unit: '%' },
+        { description: "Tempo Necessário (Cálculo)", value: daysToServe, details: `${totalDays} dias x ${percentage * 100}%`, unit: 'Dias' },
+        { description: "TEMPO PARA PROGRESSÃO", value: 0, details: timeToServeStr, isTotal: true, unit: 'Tempo' }
+    ];
+
+    return {
+        type: 'CRIMINAL',
+        originalValue: fullSentenceStr,
+        updatedValue: timeToServeStr,
+        indexUsed: desc,
+        memoryGrid,
+        chartData: [
+            { label: 'Cumprir Fechado', value: daysToServe },
+            { label: 'Restante Pena', value: totalDays - daysToServe }
+        ]
+    };
+};
+
+// 6. CÁLCULO IMOBILIÁRIO (Reajuste de Aluguel)
+const calculateRentPro = (params: any): CalculationResult => {
+    const { currentRent, indexType, monthsAccumulated } = params;
+    
+    // Simulação de índices acumulados (12 meses)
+    // IGPM (Volátil) vs IPCA (Estável)
+    const factor = indexType === 'IGPM' ? 0.045 : 0.038; // Ex: 4.5% vs 3.8% acumulado
+    
+    const adjustmentRate = factor * (monthsAccumulated / 12); // Proporcional se for menos de 1 ano
+    const adjustmentValue = currentRent * adjustmentRate;
+    const newRent = currentRent + adjustmentValue;
+
+    const memoryGrid: CalculationLineItem[] = [
+        { description: "Aluguel Atual", value: currentRent, unit: 'R$' },
+        { description: `Índice Acumulado (${indexType})`, value: adjustmentRate * 100, details: `Acumulado de ${monthsAccumulated} meses`, unit: '%' },
+        { description: "Valor do Reajuste", value: adjustmentValue, details: `R$ ${currentRent} x ${(adjustmentRate * 100).toFixed(2)}%`, unit: 'R$' },
+        { description: "NOVO ALUGUEL", value: newRent, isTotal: true, unit: 'R$' }
+    ];
+
+    return {
+        type: 'RENT',
+        originalValue: currentRent,
+        updatedValue: newRent,
+        indexUsed: indexType,
+        memoryGrid,
+        chartData: [
+            { label: 'Valor Antigo', value: currentRent },
+            { label: 'Aumento', value: adjustmentValue }
+        ]
+    };
+};
+
+// 7. CÁLCULO CONSUMIDOR (Devolução em Dobro - Indébito)
+const calculateConsumerPro = (params: any): CalculationResult => {
+    const { chargedValue, paymentDate, isBadFaith } = params;
+
+    const start = new Date(paymentDate);
+    const end = new Date();
+    const diffMonths = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+
+    // Correção Monetária (INPC)
+    const correctionFactor = 1 + (diffMonths * 0.005);
+    const correctedValue = chargedValue * correctionFactor;
+    
+    // Juros 1% a.m.
+    const interest = correctedValue * (diffMonths * 0.01);
+    
+    let subtotal = correctedValue + interest;
+    let doubleValue = 0;
+
+    // Art. 42 CDC (Devolução em Dobro)
+    if (isBadFaith) {
+        doubleValue = subtotal; // O "Dobro" é adicionar o valor mais uma vez (Valor + Valor = Dobro)
+        subtotal = subtotal * 2;
+    }
+
+    const memoryGrid: CalculationLineItem[] = [
+        { description: "Valor Cobrado Indevidamente", value: chargedValue, unit: 'R$' },
+        { description: "Atualização Monetária (INPC)", value: correctedValue - chargedValue, details: "Súmula 43 STJ", unit: 'R$' },
+        { description: "Juros de Mora (1% a.m.)", value: interest, details: "Art. 406 CC", unit: 'R$' },
+    ];
+
+    if (isBadFaith) {
+        memoryGrid.push({ description: "Dobra Legal (Art. 42 CDC)", value: doubleValue, details: "Devolução em dobro do indébito", unit: 'R$' });
+    } else {
+        memoryGrid.push({ description: "Devolução Simples", value: 0, details: "Engano justificável (sem dobra)", unit: 'Info' });
+    }
+
+    memoryGrid.push({ description: "VALOR A RESTITUIR", value: subtotal, isTotal: true, unit: 'R$' });
+
+    return {
+        type: 'CONSUMER',
+        originalValue: chargedValue,
+        updatedValue: subtotal,
+        indexUsed: isBadFaith ? "INPC + Juros + Dobra" : "INPC + Juros",
+        memoryGrid,
+        chartData: [
+            { label: 'Original', value: chargedValue },
+            { label: 'Encargos', value: interest + (correctedValue - chargedValue) },
+            { label: 'Dobra Legal', value: doubleValue }
+        ]
     };
 };
