@@ -493,7 +493,7 @@ export const ClientDashboard = () => {
 
 // --- LAWYER DASHBOARD ---
 export const LawyerDashboard = () => {
-  const { cases, currentUser, acceptCase, users } = useApp();
+  const { cases, currentUser, acceptCase, users, logout } = useApp();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [activeTab, setActiveTab] = useState<'feed' | 'my'>('feed');
   const [activeCase, setActiveCase] = useState<Case | null>(null);
@@ -524,9 +524,16 @@ export const LawyerDashboard = () => {
             Sua conta está em análise. Nossa equipe está validando sua OAB ({currentUser?.oab}).
             Você será notificado assim que aprovado.
           </p>
-          <div className="animate-pulse w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+          <div className="animate-pulse w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-6">
              <div className="w-1/2 h-full bg-yellow-400"></div>
           </div>
+          
+          <button 
+            onClick={logout} 
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition flex items-center justify-center"
+          >
+            <LogOut className="w-4 h-4 mr-2" /> Sair / Voltar
+          </button>
         </div>
       </div>
     );

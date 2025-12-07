@@ -153,12 +153,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // --- AÇÕES ---
 
   const login = async (email: string, role: UserRole, password?: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const pwd = password || '123456';
+    
+    // Tentativa normal de login
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password: password || '123456', 
+      password: pwd, 
     });
 
+    // Se der erro e for o ADMIN padrão, tentamos criar a conta automaticamente (Auto-Repair)
     if (error) {
+      if (email === 'admin@socialjuris.com' && error.message.includes('Invalid login credentials')) {
+        console.log("Admin não encontrado. Tentando criar automaticamente...");
+        
+        // Tenta criar o usuário no Auth
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: 'admin@socialjuris.com',
+          password: pwd,
+        });
+
+        if (!signUpError && signUpData.user) {
+           // Cria o perfil na tabela profiles
+           await supabase.from('profiles').upsert({
+              id: signUpData.user.id,
+              email: 'admin@socialjuris.com',
+              name: 'Administrador',
+              role: 'ADMIN',
+              verified: true,
+              avatar: `https://ui-avatars.com/api/?name=Admin&background=random`,
+              created_at: new Date().toISOString()
+           });
+           
+           // Se criou com sucesso, força o fetch do perfil para logar a UI
+           await fetchUserProfile(signUpData.user.id);
+           alert("✅ Conta de Admin criada automaticamente e logada!");
+           return;
+        }
+      }
+
+      // Tratamento de erro padrão
       if (error.message.includes("Email not confirmed")) {
          alert("⚠️ ACESSO BLOQUEADO: EMAIL NÃO CONFIRMADO\n\nO Supabase exige confirmação de email por padrão.\n\nCOMO RESOLVER:\n1. Verifique sua caixa de entrada e clique no link.\nOU\n2. No painel do Supabase, vá em 'Authentication' > 'Providers' > 'Email' e desmarque 'Confirm email'.");
       } else {
@@ -166,7 +199,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
       throw error;
     }
-    // O useEffect lida com a atualização do estado
+    // Sucesso no login normal
   };
 
   const logout = async () => {
@@ -192,8 +225,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     if (authData.user) {
-      // 2. Criar perfil na tabela profiles (Manual para garantir dados extras)
-      const { error: profileError } = await supabase.from('profiles').insert({
+      // 2. Criar perfil na tabela profiles (Upsert para evitar erros se usuario ja tentou antes)
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: authData.user.id,
         email: userData.email,
         name: userData.name,
@@ -206,11 +239,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (profileError) {
         console.error("Erro ao criar perfil:", profileError);
-        alert("Conta criada, mas houve um erro ao salvar o perfil. Tente logar.");
+        alert("Erro ao criar perfil: " + profileError.message);
       } else {
         if (!authData.session) {
             // Se não tem sessão, é porque o Supabase está aguardando confirmação de email
-            alert("✅ Cadastro realizado com sucesso!\n\n⚠️ IMPORTANTE: Um email de confirmação foi enviado. Você precisa confirmar antes de entrar, ou desativar a opção 'Confirm Email' no seu painel Supabase.");
+            alert("✅ Cadastro realizado!\n\n⚠️ Se você não desativou a confirmação de email no Supabase, verifique sua caixa de entrada.");
         } else {
              // Força um fetch imediato para garantir que a UI atualize sem precisar de reload
              await fetchUserProfile(authData.user.id);

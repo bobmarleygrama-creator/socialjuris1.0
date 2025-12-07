@@ -27,12 +27,11 @@ const AuthScreen = ({
   useEffect(() => {
     if (role === UserRole.ADMIN && type === 'login') {
       setEmail('admin@socialjuris.com');
+      // A senha padrão agora está implícita no fluxo do store se o usuário não digitar
     } else {
       // Keep email if switching modes to improve UX, only clear if empty context
       if (!email) setEmail('');
     }
-    // Don't clear password on type switch to avoid frustration, or clear if security preferred. 
-    // Let's clear for realism.
     setPassword('');
   }, [role, type]);
 
@@ -141,12 +140,6 @@ const AuthScreen = ({
               </button>
             </p>
           </div>
-
-          {type === 'login' && role === UserRole.ADMIN && (
-             <div className="mt-6 text-center text-xs text-slate-500 bg-slate-100 p-3 rounded-lg border border-slate-200">
-               <span className="font-bold">Dica de Acesso Admin:</span> Certifique-se de ter criado um usuário com role 'ADMIN' no banco de dados do Supabase.
-             </div>
-          )}
        </div>
     </div>
   );
