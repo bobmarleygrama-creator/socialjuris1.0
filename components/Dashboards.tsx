@@ -204,23 +204,6 @@ const DashboardLayout: React.FC<{
               <UserIcon className="w-5 h-5" />
               <span>Meu Perfil</span>
             </button>
-
-            <button 
-              onClick={() => onViewChange('notifications')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all justify-between group ${
-                  activeView === 'notifications' 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                  <Bell className="w-5 h-5" />
-                  <span>Notificações</span>
-              </div>
-              {unreadCount > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
-              )}
-            </button>
           </nav>
         </div>
         <div className="mt-auto p-6 border-t border-slate-800">
@@ -232,24 +215,39 @@ const DashboardLayout: React.FC<{
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-5 flex justify-between items-center sticky top-0 z-10">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
           <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight hidden md:block">
                   {activeView === 'dashboard' ? title : activeView === 'profile' ? 'Meu Perfil' : 'Central de Notificações'}
               </h1>
-              {activeView === 'dashboard' && <p className="text-sm text-slate-500">Visão geral das suas atividades hoje</p>}
+              {activeView === 'dashboard' && <p className="text-sm text-slate-500 hidden md:block">Visão geral das suas atividades hoje</p>}
+              <div className="md:hidden flex items-center space-x-2">
+                  <span className="text-xl font-bold text-slate-900">SocialJuris</span>
+              </div>
           </div>
-          <div className="flex items-center space-x-4 md:hidden">
-             <button onClick={() => onViewChange('notifications')} className="relative p-2 text-slate-500">
+          <div className="flex items-center space-x-6">
+             <button 
+                onClick={() => onViewChange('notifications')} 
+                className={`relative p-2 transition rounded-full ${activeView === 'notifications' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                title="Ver Notificações"
+             >
                  <Bell className="w-6 h-6" />
-                 {unreadCount > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+                 {/* BADGE VERMELHO DE NOTIFICAÇÕES */}
+                 {unreadCount > 0 && (
+                     <span className="absolute top-0 right-0 flex h-5 w-5 translate-x-1/4 -translate-y-1/4">
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                       <span className="relative inline-flex rounded-full h-5 w-5 bg-red-600 text-[10px] font-bold text-white items-center justify-center border-2 border-white">
+                         {unreadCount}
+                       </span>
+                     </span>
+                 )}
              </button>
-             <button onClick={logout} className="text-sm font-medium text-slate-500">Sair</button>
+             <button onClick={logout} className="md:hidden text-sm font-medium text-slate-500">Sair</button>
           </div>
         </header>
         
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
             {children}
         </div>
       </main>
@@ -263,7 +261,12 @@ export const ClientDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   
   const [showModal, setShowModal] = useState(false);
-  const [activeCase, setActiveCase] = useState<Case | null>(null);
+  
+  // CORREÇÃO: Em vez de armazenar o objeto Case (que fica estático), armazenamos o ID
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
+  
+  // Computamos o caso ativo sempre com base na lista 'cases' atualizada do Store
+  const activeCase = cases.find(c => c.id === activeCaseId) || null;
   
   // Case Creation State
   const [description, setDescription] = useState('');
@@ -368,7 +371,7 @@ export const ClientDashboard = () => {
               </div>
 
               <button 
-                onClick={() => setActiveCase(c)}
+                onClick={() => setActiveCaseId(c.id)}
                 className="w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-medium hover:bg-indigo-50 hover:text-indigo-700 transition flex justify-center items-center border border-slate-200"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
@@ -482,7 +485,7 @@ export const ClientDashboard = () => {
                 currentCase={activeCase} 
                 currentUser={currentUser!} 
                 otherPartyName={activeCase.lawyerId ? "Dr. Advogado" : "Sistema"} 
-                onClose={() => setActiveCase(null)}
+                onClose={() => setActiveCaseId(null)}
              />
           </div>
         </div>
@@ -496,7 +499,10 @@ export const LawyerDashboard = () => {
   const { cases, currentUser, acceptCase, users, logout } = useApp();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [activeTab, setActiveTab] = useState<'feed' | 'my'>('feed');
-  const [activeCase, setActiveCase] = useState<Case | null>(null);
+  
+  // CORREÇÃO: Mesmo princípio aqui, usamos activeCaseId para reatividade
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
+  const activeCase = cases.find(c => c.id === activeCaseId) || null;
 
   // Filters
   const [filterCity, setFilterCity] = useState('');
@@ -662,7 +668,7 @@ export const LawyerDashboard = () => {
           )
         ) : (
           myCases.map(c => (
-            <div key={c.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer" onClick={() => setActiveCase(c)}>
+            <div key={c.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer" onClick={() => setActiveCaseId(c.id)}>
               <div className="flex justify-between items-center mb-4">
                  <div className="flex items-center space-x-3">
                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
@@ -715,7 +721,7 @@ export const LawyerDashboard = () => {
                 currentCase={activeCase} 
                 currentUser={currentUser!} 
                 otherPartyName={getClientName(activeCase.clientId)} 
-                onClose={() => setActiveCase(null)}
+                onClose={() => setActiveCaseId(null)}
              />
           </div>
         </div>

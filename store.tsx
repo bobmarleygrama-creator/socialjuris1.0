@@ -322,7 +322,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await supabase.from('notifications').insert({
             user_id: targetCase.clientId,
             title: 'Advogado Aceitou',
-            message: `O Dr(a). ${currentUser.name} aceitou seu caso.`,
+            message: `O Dr(a). ${currentUser.name} aceitou seu caso. Abra o painel para conversar.`,
             type: 'success'
         });
         
@@ -340,14 +340,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const sendMessage = async (caseId: string, content: string, type: 'text' | 'image' | 'file' = 'text') => {
     if (!currentUser) return;
 
-    await supabase.from('messages').insert({
+    // 1. Inserir a mensagem
+    const { error } = await supabase.from('messages').insert({
         case_id: caseId,
         sender_id: currentUser.id,
         content,
         type,
         file_url: type !== 'text' ? 'https://picsum.photos/400/300' : null // Mock de upload real para simplificar
     });
-    fetchCases();
+
+    if (!error) {
+        // 2. Garantir que temos o caso atualizado para saber quem é o destinatário
+        // A lista local 'cases' pode ter um atraso, então buscamos a info do caso específico se necessário,
+        // mas por performance usamos a lista local primeiro.
+        const currentCase = cases.find(c => c.id === caseId);
+        
+        if (currentCase) {
+            // Se eu sou o cliente, o destinatário é o advogado
+            // Se eu sou o advogado, o destinatário é o cliente
+            const recipientId = currentUser.id === currentCase.clientId ? currentCase.lawyerId : currentCase.clientId;
+
+            if (recipientId) {
+                console.log(`Enviando notificação para: ${recipientId}`);
+                await supabase.from('notifications').insert({
+                    user_id: recipientId,
+                    title: 'Nova Mensagem',
+                    message: `${currentUser.name} enviou uma mensagem.`,
+                    type: 'info',
+                    read: false // Explicitamente não lida
+                });
+            }
+        }
+        
+        // Forçar atualização imediata para o usuário atual ver sua msg enviada sem delay
+        fetchCases();
+    }
   };
 
   const verifyLawyer = async (userId: string) => {
@@ -378,6 +405,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const markNotificationAsRead = async (id: string) => {
+      // Otimista: atualiza localmente primeiro
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      
       await supabase
         .from('notifications')
         .update({ read: true })
