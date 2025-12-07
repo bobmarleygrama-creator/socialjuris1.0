@@ -75,3 +75,18 @@ export interface DashboardStats {
   totalRevenue?: number; // Simulated for lawyers
   pendingVerifications?: number; // For admin
 }
+
+export interface StrategyAnalysis {
+  weaknesses: string[];
+  counterArguments: string[];
+  winProbability: string;
+  recommendedFocus: string;
+}
+
+export interface CalculationResult {
+  originalValue: number;
+  updatedValue: number;
+  interest: number;
+  indexUsed: string;
+  breakdown: { month: string; value: number }[];
+}

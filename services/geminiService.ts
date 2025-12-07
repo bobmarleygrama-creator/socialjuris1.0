@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { StrategyAnalysis, CalculationResult } from "../types";
 
 export const analyzeCaseDescription = async (description: string): Promise<{ area: string; title: string; summary: string; complexity: 'Baixa' | 'Média' | 'Alta' }> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -50,4 +51,51 @@ export const calculateCasePrice = (complexity: string): number => {
         case 'Alta': return 6.00;
         default: return 4.00;
     }
+};
+
+// --- FERRAMENTAS PRO (Simulação Avançada) ---
+
+export const analyzeOpposingStrategy = async (text: string): Promise<StrategyAnalysis> => {
+    // Simulating AI analysis delay
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    return {
+        weaknesses: [
+            "Ausência de prova material sobre o dano alegado.",
+            "Citação de jurisprudência revogada em 2023.",
+            "Falha no nexo causal entre a ação do réu e o resultado."
+        ],
+        counterArguments: [
+            "Invocar a Súmula 385 do STJ para descaracterizar dano moral.",
+            "Apresentar prints que comprovam a ciência prévia do autor.",
+            "Arguir a prescrição trienal baseada no Art. 206 do Código Civil."
+        ],
+        winProbability: "Alta (75%)",
+        recommendedFocus: "Focar na preliminar de ilegitimidade passiva e na falta de provas documentais."
+    };
+};
+
+export const calculateLegalAdjustment = async (amount: number, date: string, index: string): Promise<CalculationResult> => {
+    // Simulate API calculation
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const years = (new Date().getFullYear() - new Date(date).getFullYear());
+    const interestRate = 0.01 * 12 * Math.max(1, years); // 1% ao mês simples
+    const correctionFactor = 1 + (years * 0.05); // Simulação de inflação
+
+    const correctedValue = amount * correctionFactor;
+    const interestValue = correctedValue * interestRate;
+    const total = correctedValue + interestValue;
+
+    return {
+        originalValue: amount,
+        updatedValue: total,
+        interest: interestValue,
+        indexUsed: index,
+        breakdown: [
+            { month: 'Principal', value: amount },
+            { month: 'Correção', value: correctedValue - amount },
+            { month: 'Juros', value: interestValue }
+        ]
+    };
 };

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
-import { UserRole, CaseStatus, Case, User, Notification } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles } from 'lucide-react';
+import { UserRole, CaseStatus, Case, User, Notification, StrategyAnalysis, CalculationResult } from '../types';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap } from 'lucide-react';
 import { Chat } from './Chat';
-import { analyzeCaseDescription, calculateCasePrice } from '../services/geminiService';
+import { analyzeCaseDescription, calculateCasePrice, analyzeOpposingStrategy, calculateLegalAdjustment } from '../services/geminiService';
 
 // --- CONSTANTES ---
 const BRAZIL_STATES = [
@@ -148,9 +148,224 @@ const NotificationList: React.FC = () => {
   );
 };
 
+// --- PRO TOOLS COMPONENTS ---
+
+const PremiumLockOverlay: React.FC<{ onUnlock: () => void }> = ({ onUnlock }) => (
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm rounded-2xl">
+        <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm text-center transform hover:scale-105 transition duration-300">
+            <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/30">
+                <Lock className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">Ferramenta PRO</h3>
+            <p className="text-slate-500 mb-6">Esta funcionalidade avançada é exclusiva para assinantes SocialJuris PRO.</p>
+            <button 
+                onClick={onUnlock}
+                className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center space-x-2"
+            >
+                <Sparkles className="w-4 h-4 text-amber-400"/>
+                <span>Desbloquear Agora</span>
+            </button>
+        </div>
+    </div>
+);
+
+const StrategyAnalyzer: React.FC<{ isPremium: boolean, onUnlock: () => void }> = ({ isPremium, onUnlock }) => {
+    const [text, setText] = useState('');
+    const [analysis, setAnalysis] = useState<StrategyAnalysis | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleAnalyze = async () => {
+        if (!text) return;
+        setLoading(true);
+        const result = await analyzeOpposingStrategy(text);
+        setAnalysis(result);
+        setLoading(false);
+    };
+
+    return (
+        <div className="relative min-h-[600px]">
+            {!isPremium && <PremiumLockOverlay onUnlock={onUnlock} />}
+            <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${!isPremium ? 'opacity-30 pointer-events-none' : ''}`}>
+                <div className="space-y-4">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 className="font-bold text-slate-900 mb-4 flex items-center"><FileText className="w-5 h-5 mr-2 text-indigo-600"/> Dados da Peça Oposta</h3>
+                        <p className="text-sm text-slate-500 mb-3">Cole o texto da contestação ou petição inicial da outra parte.</p>
+                        <textarea 
+                            className="w-full h-64 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-mono"
+                            placeholder="Ex: O réu alega que não houve nexo causal..."
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                        />
+                        <button 
+                            onClick={handleAnalyze}
+                            disabled={loading || !text}
+                            className="w-full mt-4 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center"
+                        >
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2"/> : <BrainCircuit className="w-5 h-5 mr-2"/>}
+                            {loading ? 'Analisando Estratégia...' : 'Gerar Análise Estratégica'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                     {analysis ? (
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full animate-in fade-in slide-in-from-right-4 duration-500">
+                             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                                 <h3 className="font-bold text-slate-900 flex items-center"><Zap className="w-5 h-5 mr-2 text-amber-500"/> Resultado da Análise</h3>
+                                 <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Probabilidade de Êxito: {analysis.winProbability}</span>
+                             </div>
+
+                             <div className="space-y-6">
+                                 <div>
+                                     <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 flex items-center"><AlertTriangle className="w-3 h-3 mr-1"/> Pontos Fracos Detectados</h4>
+                                     <ul className="space-y-2">
+                                         {analysis.weaknesses.map((w, i) => (
+                                             <li key={i} className="text-sm text-slate-700 bg-red-50 p-2 rounded border-l-2 border-red-500">{w}</li>
+                                         ))}
+                                     </ul>
+                                 </div>
+                                 
+                                 <div>
+                                     <h4 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 flex items-center"><Shield className="w-3 h-3 mr-1"/> Sugestão de Contra-Argumentos</h4>
+                                     <ul className="space-y-2">
+                                         {analysis.counterArguments.map((w, i) => (
+                                             <li key={i} className="text-sm text-slate-700 bg-indigo-50 p-2 rounded border-l-2 border-indigo-500">{w}</li>
+                                         ))}
+                                     </ul>
+                                 </div>
+
+                                 <div className="bg-slate-900 text-white p-4 rounded-xl">
+                                     <p className="text-xs text-slate-400 uppercase font-bold mb-1">Recomendação Final</p>
+                                     <p className="text-sm font-medium">{analysis.recommendedFocus}</p>
+                                 </div>
+                             </div>
+                         </div>
+                     ) : (
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col items-center justify-center text-center opacity-50">
+                             <BrainCircuit className="w-16 h-16 text-slate-200 mb-4"/>
+                             <p className="text-slate-400 font-medium">Aguardando entrada de dados...</p>
+                         </div>
+                     )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = ({ isPremium, onUnlock }) => {
+    const [amount, setAmount] = useState(10000);
+    const [date, setDate] = useState('2022-01-01');
+    const [index, setIndex] = useState('IGPM');
+    const [result, setResult] = useState<CalculationResult | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleCalculate = async () => {
+        setLoading(true);
+        const res = await calculateLegalAdjustment(amount, date, index);
+        setResult(res);
+        setLoading(false);
+    };
+
+    return (
+        <div className="relative min-h-[600px]">
+            {!isPremium && <PremiumLockOverlay onUnlock={onUnlock} />}
+            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${!isPremium ? 'opacity-30 pointer-events-none' : ''}`}>
+                 <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                     <h3 className="font-bold text-slate-900 mb-6 flex items-center"><Calculator className="w-5 h-5 mr-2 text-indigo-600"/> Parâmetros</h3>
+                     
+                     <div className="space-y-5">
+                         <div>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Valor Original (R$)</label>
+                             <input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"/>
+                         </div>
+                         <div>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Data Inicial</label>
+                             <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"/>
+                         </div>
+                         <div>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Índice de Correção</label>
+                             <select value={index} onChange={e => setIndex(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                                 <option value="IGPM">IGP-M (FGV)</option>
+                                 <option value="IPCA">IPCA (IBGE)</option>
+                                 <option value="INPC">INPC (IBGE)</option>
+                             </select>
+                         </div>
+                         
+                         <div className="pt-4">
+                            <button 
+                                onClick={handleCalculate}
+                                disabled={loading}
+                                className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : 'Calcular Atualização'}
+                            </button>
+                         </div>
+                     </div>
+                 </div>
+
+                 <div className="lg:col-span-2 space-y-6">
+                     {result ? (
+                         <>
+                            <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white shadow-xl animate-in zoom-in duration-300">
+                                <p className="text-indigo-200 text-sm font-medium uppercase tracking-wider mb-1">Valor Atualizado Total</p>
+                                <h2 className="text-5xl font-extrabold mb-6">R$ {result.updatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                                
+                                <div className="grid grid-cols-3 gap-4 border-t border-indigo-500/30 pt-4">
+                                    <div>
+                                        <p className="text-xs text-indigo-300">Principal</p>
+                                        <p className="font-bold text-lg">R$ {result.originalValue.toLocaleString('pt-BR')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-indigo-300">Juros (1% a.m.)</p>
+                                        <p className="font-bold text-lg">R$ {result.interest.toLocaleString('pt-BR')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-indigo-300">Índice</p>
+                                        <p className="font-bold text-lg">{result.indexUsed}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                <h4 className="font-bold text-slate-900 mb-4 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-slate-500"/> Composição do Valor</h4>
+                                <div className="space-y-4">
+                                    {result.breakdown.map((item, i) => (
+                                        <div key={i}>
+                                            <div className="flex justify-between text-sm mb-1">
+                                                <span className="text-slate-600 font-medium">{item.month}</span>
+                                                <span className="text-slate-900 font-bold">R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                                <div 
+                                                    className="bg-indigo-600 h-2.5 rounded-full" 
+                                                    style={{ width: `${(item.value / result.updatedValue) * 100}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button className="mt-6 w-full py-2 border-2 border-slate-200 text-slate-600 font-bold rounded-lg hover:border-slate-400 hover:text-slate-800 transition">
+                                    Exportar Relatório PDF
+                                </button>
+                            </div>
+                         </>
+                     ) : (
+                         <div className="h-full bg-white rounded-2xl border border-slate-200 border-dashed flex items-center justify-center p-10 opacity-60">
+                             <div className="text-center">
+                                <TrendingUp className="w-16 h-16 text-slate-300 mx-auto mb-4"/>
+                                <p className="text-slate-400 font-medium">Os resultados aparecerão aqui</p>
+                             </div>
+                         </div>
+                     )}
+                 </div>
+            </div>
+        </div>
+    );
+};
+
 // --- SHARED LAYOUT ---
 
-type ViewType = 'dashboard' | 'profile' | 'notifications' | 'premium_placeholder';
+type ViewType = 'dashboard' | 'profile' | 'notifications' | 'pro_strategy' | 'pro_calculator' | 'premium_sales';
 
 const DashboardLayout: React.FC<{ 
     children: React.ReactNode; 
@@ -162,14 +377,6 @@ const DashboardLayout: React.FC<{
   const unreadCount = notifications.filter(n => n.userId === currentUser?.id && !n.read).length;
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [processingPremium, setProcessingPremium] = useState(false);
-
-  const handlePremiumClick = () => {
-      if (currentUser?.isPremium) {
-          onViewChange('premium_placeholder');
-      } else {
-          setShowPremiumModal(true);
-      }
-  };
 
   const handleSubscribe = async () => {
       setProcessingPremium(true);
@@ -197,16 +404,13 @@ const DashboardLayout: React.FC<{
                   </div>
                   <div className="relative z-10 space-y-4 mt-8">
                       <div className="flex items-center space-x-3 text-sm">
-                          <Check className="w-5 h-5 text-green-400"/> <span>Gestão Avançada de Processos</span>
+                          <Check className="w-5 h-5 text-green-400"/> <span>Opositor IA (Análise de Peças)</span>
                       </div>
                       <div className="flex items-center space-x-3 text-sm">
-                          <Check className="w-5 h-5 text-green-400"/> <span>IA para Análise de Contratos</span>
+                          <Check className="w-5 h-5 text-green-400"/> <span>Calculadora Judicial Visual</span>
                       </div>
                       <div className="flex items-center space-x-3 text-sm">
-                          <Check className="w-5 h-5 text-green-400"/> <span>Cálculos Jurídicos Automáticos</span>
-                      </div>
-                      <div className="flex items-center space-x-3 text-sm">
-                          <Check className="w-5 h-5 text-green-400"/> <span>Agenda Inteligente</span>
+                          <Check className="w-5 h-5 text-green-400"/> <span>Gestão Avançada</span>
                       </div>
                   </div>
               </div>
@@ -245,86 +449,97 @@ const DashboardLayout: React.FC<{
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col sticky top-0 h-screen shadow-xl z-20">
-        <div className="p-6 border-b border-slate-800">
+      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col sticky top-0 h-screen shadow-xl z-20 overflow-hidden">
+        <div className="p-6 border-b border-slate-800 bg-slate-900">
           <div className="flex items-center space-x-2 text-indigo-400">
             <Briefcase className="w-6 h-6" />
             <span className="text-xl font-bold text-white tracking-tight">SocialJuris</span>
           </div>
         </div>
-        <div className="p-6 overflow-y-auto scrollbar-hide">
-          <div className="flex items-center space-x-3 mb-8 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
-            <img src={currentUser?.avatar} alt="User" className="w-10 h-10 rounded-full border-2 border-indigo-500 object-cover" />
-            <div className="overflow-hidden">
-              <div className="flex items-center">
-                  <p className="font-medium text-sm truncate mr-2">{currentUser?.name}</p>
-                  {currentUser?.isPremium && <Sparkles className="w-3 h-3 text-amber-400" />}
-              </div>
-              <p className="text-xs text-slate-400 capitalize">{currentUser?.role === 'LAWYER' ? 'Advogado' : currentUser?.role === 'CLIENT' ? 'Cliente' : 'Admin'}</p>
-            </div>
-          </div>
-          <nav className="space-y-2">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">Menu</div>
-            
-            <button 
-              onClick={() => onViewChange('dashboard')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${
-                  activeView === 'dashboard' 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Activity className="w-5 h-5" />
-              <span>Painel Geral</span>
-            </button>
+        
+        <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col">
+           {/* Standard Section */}
+           <div className="p-4 space-y-1">
+             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-2">Operacional</div>
+             <button onClick={() => onViewChange('dashboard')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${activeView === 'dashboard' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+               <Activity className="w-5 h-5" /> <span>Dashboard</span>
+             </button>
+             <button onClick={() => onViewChange('profile')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${activeView === 'profile' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+               <UserIcon className="w-5 h-5" /> <span>Meu Perfil</span>
+             </button>
+           </div>
 
-            <button 
-              onClick={() => onViewChange('profile')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${
-                  activeView === 'profile' 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <UserIcon className="w-5 h-5" />
-              <span>Meu Perfil</span>
-            </button>
+           {/* LAWYER PRO SECTION (Visually Distinct) */}
+           {currentUser?.role === UserRole.LAWYER && (
+                <div className="mt-4 flex-1 bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950 border-t border-slate-800 relative">
+                    {/* Gold accent line */}
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
+                    
+                    <div className="p-4">
+                        <div className="flex items-center justify-between mb-4 px-2">
+                             <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest flex items-center">
+                                <Sparkles className="w-3 h-3 mr-1"/> SocialJuris PRO
+                             </div>
+                             {!currentUser.isPremium && <Lock className="w-3 h-3 text-amber-700"/>}
+                        </div>
 
-            {/* LAWYER PRO SECTION */}
-            {currentUser?.role === UserRole.LAWYER && (
-                <div className="mt-8 pt-6 border-t border-slate-800">
-                    <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 px-2 flex justify-between items-center">
-                        <span>SocialJuris PRO</span>
-                        {!currentUser.isPremium && <Lock className="w-3 h-3"/>}
-                    </div>
-                    {[
-                        { name: 'Gestão de Clientes', icon: Users },
-                        { name: 'Controle Processual', icon: Scale },
-                        { name: 'Calculadora Jurídica', icon: Calculator },
-                        { name: 'Redator Inteligente (IA)', icon: FileText },
-                        { name: 'Agenda Legal', icon: Calendar },
-                        { name: 'Análise de Contratos (IA)', icon: Search }
-                    ].map((item, idx) => (
-                        <button
-                            key={idx}
-                            onClick={handlePremiumClick}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all group ${currentUser.isPremium ? 'text-slate-400 hover:text-amber-200 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-800/50 cursor-pointer'}`}
-                        >
-                            <div className="flex items-center space-x-3">
-                                <item.icon className={`w-4 h-4 ${currentUser.isPremium ? 'text-amber-500/80 group-hover:text-amber-400' : 'text-slate-600'}`} />
-                                <span className="text-sm">{item.name}</span>
+                        <div className="space-y-1">
+                            {[
+                                { id: 'pro_strategy', name: 'Opositor IA', icon: BrainCircuit, desc: 'Análise Estratégica' },
+                                { id: 'pro_calculator', name: 'Calculadora Visual', icon: Calculator, desc: 'Atualização Monetária' },
+                            ].map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => onViewChange(item.id as ViewType)}
+                                    className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg border transition-all group ${
+                                        activeView === item.id
+                                        ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' 
+                                        : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-amber-200'
+                                    }`}
+                                >
+                                    <div className={`p-1.5 rounded-md ${activeView === item.id ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-500 group-hover:text-amber-400'}`}>
+                                        <item.icon className="w-4 h-4" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="text-sm font-semibold">{item.name}</div>
+                                        <div className="text-[10px] opacity-60">{item.desc}</div>
+                                    </div>
+                                </button>
+                            ))}
+                            
+                            {/* Disabled/Future Tools */}
+                            {['Gestão de Contratos', 'Agenda Inteligente'].map((tool, idx) => (
+                                <div key={idx} className="w-full flex items-center space-x-3 px-3 py-2 text-slate-600 opacity-50 cursor-not-allowed">
+                                    <div className="p-1.5 rounded-md bg-slate-800"><Lock className="w-4 h-4"/></div>
+                                    <span className="text-sm">{tool}</span>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {!currentUser.isPremium && (
+                            <div className="mt-6 mx-2 p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-center shadow-lg shadow-orange-900/50">
+                                <p className="text-white text-xs font-bold mb-2">Desbloqueie o Poder Total</p>
+                                <button onClick={() => setShowPremiumModal(true)} className="w-full bg-slate-900 text-white text-xs py-2 rounded-lg font-bold hover:bg-slate-800 transition">
+                                    Assinar Premium
+                                </button>
                             </div>
-                            {!currentUser.isPremium && <Lock className="w-3 h-3 text-slate-700" />}
-                        </button>
-                    ))}
+                        )}
+                    </div>
                 </div>
             )}
-          </nav>
         </div>
-        <div className="mt-auto p-6 border-t border-slate-800">
-          <button onClick={logout} className="flex items-center space-x-2 text-slate-400 hover:text-red-400 transition-colors w-full">
-            <LogOut className="w-5 h-5" />
-            <span>Sair do Sistema</span>
+
+        <div className="p-6 border-t border-slate-800 bg-slate-900">
+          <div className="flex items-center space-x-3 mb-4">
+             <img src={currentUser?.avatar} alt="User" className="w-8 h-8 rounded-full border border-slate-600" />
+             <div className="overflow-hidden">
+                <p className="text-sm font-medium truncate text-slate-300">{currentUser?.name}</p>
+                {currentUser?.isPremium && <span className="text-[10px] text-amber-400 font-bold">Membro PRO</span>}
+             </div>
+          </div>
+          <button onClick={logout} className="flex items-center space-x-2 text-slate-500 hover:text-red-400 transition-colors w-full text-sm">
+            <LogOut className="w-4 h-4" />
+            <span>Sair</span>
           </button>
         </div>
       </aside>
@@ -336,9 +551,13 @@ const DashboardLayout: React.FC<{
         <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
           <div>
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight hidden md:block">
-                  {activeView === 'dashboard' ? title : activeView === 'profile' ? 'Meu Perfil' : activeView === 'premium_placeholder' ? 'Ferramentas PRO' : 'Central de Notificações'}
+                  {activeView === 'dashboard' ? title : 
+                   activeView === 'profile' ? 'Meu Perfil' : 
+                   activeView === 'pro_strategy' ? 'Opositor IA (Strategy Analyzer)' :
+                   activeView === 'pro_calculator' ? 'Calculadora Jurídica' :
+                   'Central de Notificações'}
               </h1>
-              {activeView === 'dashboard' && <p className="text-sm text-slate-500 hidden md:block">Visão geral das suas atividades hoje</p>}
+              {activeView === 'pro_strategy' && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">FERRAMENTA BETA</span>}
               <div className="md:hidden flex items-center space-x-2">
                   <span className="text-xl font-bold text-slate-900">SocialJuris</span>
               </div>
@@ -682,6 +901,7 @@ export const LawyerDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [activeTab, setActiveTab] = useState<'feed' | 'my'>('feed');
   const [showBuyJuris, setShowBuyJuris] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const activeCase = cases.find(c => c.id === activeCaseId) || null;
@@ -944,29 +1164,6 @@ export const LawyerDashboard = () => {
     </>
   );
 
-  const renderPremiumPlaceholder = () => (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-          <div className="bg-amber-100 p-6 rounded-full mb-6 animate-bounce">
-              <Sparkles className="w-12 h-12 text-amber-500" />
-          </div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Área PRO Desbloqueada!</h2>
-          <p className="text-slate-500 max-w-md mx-auto mb-8">
-              Em breve, estas ferramentas estarão disponíveis aqui. Estamos finalizando os últimos ajustes da inteligência artificial para você.
-          </p>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-2xl w-full grid grid-cols-2 gap-4">
-               {[
-                  'Gestão de Clientes', 'Controle Processual', 'Calculadora Jurídica', 
-                  'Redator Inteligente (IA)', 'Agenda Legal', 'Análise de Contratos (IA)'
-               ].map(tool => (
-                   <div key={tool} className="flex items-center p-3 bg-slate-50 rounded-lg">
-                       <Check className="w-4 h-4 text-green-500 mr-2"/>
-                       <span className="text-slate-700 font-medium text-sm">{tool}</span>
-                   </div>
-               ))}
-          </div>
-      </div>
-  );
-
   return (
     <DashboardLayout 
         title="Portal do Advogado"
@@ -976,7 +1173,8 @@ export const LawyerDashboard = () => {
       {activeView === 'dashboard' && renderDashboardContent()}
       {activeView === 'profile' && <UserProfile />}
       {activeView === 'notifications' && <NotificationList />}
-      {activeView === 'premium_placeholder' && renderPremiumPlaceholder()}
+      {activeView === 'pro_strategy' && <StrategyAnalyzer isPremium={!!currentUser?.isPremium} onUnlock={() => setShowPremiumModal(true)} />}
+      {activeView === 'pro_calculator' && <LegalCalculator isPremium={!!currentUser?.isPremium} onUnlock={() => setShowPremiumModal(true)} />}
 
        {/* Lawyer Chat Overlay */}
        {activeCase && (
