@@ -1,3 +1,4 @@
+
 export enum UserRole {
   CLIENT = 'CLIENT',
   LAWYER = 'LAWYER',
@@ -79,14 +80,26 @@ export interface DashboardStats {
 export interface StrategyAnalysis {
   weaknesses: string[];
   counterArguments: string[];
-  winProbability: string;
+  winProbability: string; // Ex: "75%"
+  winProbabilityValue: number; // Ex: 75 (para gráficos)
   recommendedFocus: string;
+  jurisprudence: { title: string; summary: string }[]; // Novidade: Sugestão de leis/súmulas
 }
 
 export interface CalculationResult {
   originalValue: number;
   updatedValue: number;
-  interest: number;
+  totalInterest: number;
+  totalCorrection: number;
+  totalFine: number; // Multa
+  totalFees: number; // Honorários
   indexUsed: string;
-  breakdown: { month: string; value: number }[];
+  timeInMonths: number;
+  // Dados para o gráfico (evolução ano a ano)
+  chartData: { 
+      label: string; // Ano/Mês
+      value: number; // Valor acumulado
+      interestPart: number; 
+      principalPart: number;
+  }[];
 }

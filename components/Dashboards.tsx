@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification, StrategyAnalysis, CalculationResult } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock, Eye, XCircle } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock, Eye, XCircle, Hammer, LayoutGrid, PieChart, ChevronRight, Copy, Printer, BookOpen, Download, RefreshCw, ChevronDown } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription, calculateCasePrice, analyzeOpposingStrategy, calculateLegalAdjustment } from '../services/geminiService';
 
@@ -9,6 +10,8 @@ import { analyzeCaseDescription, calculateCasePrice, analyzeOpposingStrategy, ca
 const BRAZIL_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
 ];
+
+type ViewType = 'dashboard' | 'profile' | 'notifications' | 'pro_analytics' | 'pro_strategy' | 'pro_calculator' | 'pro_writer' | 'pro_docs' | 'pro_calendar' | 'pro_crm' | 'premium_sales';
 
 // --- SUB-COMPONENTS ---
 
@@ -169,6 +172,21 @@ const PremiumLockOverlay: React.FC<{ onUnlock: () => void }> = ({ onUnlock }) =>
     </div>
 );
 
+const FeatureComingSoon: React.FC<{ title: string, icon: any, desc: string }> = ({ title, icon: Icon, desc }) => (
+    <div className="h-full bg-white rounded-2xl border border-slate-200 flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in duration-500">
+        <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6">
+            <Icon className="w-10 h-10 text-indigo-600" />
+        </div>
+        <div className="inline-flex items-center space-x-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold mb-4">
+            <Hammer className="w-3 h-3" />
+            <span>EM DESENVOLVIMENTO</span>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">{title}</h2>
+        <p className="text-slate-500 max-w-md">{desc}</p>
+        <p className="text-sm text-slate-400 mt-6">Esta funcionalidade estará disponível em breve para todos os assinantes PRO.</p>
+    </div>
+);
+
 const StrategyAnalyzer: React.FC<{ isPremium: boolean, onUnlock: () => void }> = ({ isPremium, onUnlock }) => {
     const [text, setText] = useState('');
     const [analysis, setAnalysis] = useState<StrategyAnalysis | null>(null);
@@ -177,73 +195,170 @@ const StrategyAnalyzer: React.FC<{ isPremium: boolean, onUnlock: () => void }> =
     const handleAnalyze = async () => {
         if (!text) return;
         setLoading(true);
+        // Simulação de delay para efeito dramático se a API for rápida demais
         const result = await analyzeOpposingStrategy(text);
         setAnalysis(result);
         setLoading(false);
     };
 
     return (
-        <div className="relative min-h-[600px]">
+        <div className="relative min-h-[600px] bg-slate-50">
             {!isPremium && <PremiumLockOverlay onUnlock={onUnlock} />}
-            <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${!isPremium ? 'opacity-30 pointer-events-none' : ''}`}>
-                <div className="space-y-4">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 className="font-bold text-slate-900 mb-4 flex items-center"><FileText className="w-5 h-5 mr-2 text-indigo-600"/> Dados da Peça Oposta</h3>
-                        <p className="text-sm text-slate-500 mb-3">Cole o texto da contestação ou petição inicial da outra parte.</p>
-                        <textarea 
-                            className="w-full h-64 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-mono"
-                            placeholder="Ex: O réu alega que não houve nexo causal..."
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                        />
-                        <button 
-                            onClick={handleAnalyze}
-                            disabled={loading || !text}
-                            className="w-full mt-4 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center"
-                        >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2"/> : <BrainCircuit className="w-5 h-5 mr-2"/>}
-                            {loading ? 'Analisando Estratégia...' : 'Gerar Análise Estratégica'}
-                        </button>
+            
+            <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${!isPremium ? 'opacity-30 pointer-events-none' : ''}`}>
+                
+                {/* --- LEFT COLUMN: INPUT --- */}
+                <div className="lg:col-span-4 space-y-4">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col">
+                        <div className="mb-4">
+                            <h3 className="font-bold text-slate-900 flex items-center text-lg">
+                                <FileText className="w-5 h-5 mr-2 text-indigo-600"/> 
+                                Peça Processual
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-1">Cole abaixo a Inicial, Contestação ou Sentença para análise.</p>
+                        </div>
+                        
+                        <div className="flex-1 relative">
+                             <textarea 
+                                className="w-full h-full min-h-[400px] p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-mono leading-relaxed resize-none"
+                                placeholder="Cole o texto jurídico aqui..."
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                            />
+                            {text && (
+                                <button 
+                                    onClick={() => setText('')}
+                                    className="absolute top-2 right-2 p-1 bg-slate-200 rounded-md hover:bg-slate-300 text-slate-600"
+                                    title="Limpar"
+                                >
+                                    <X className="w-4 h-4"/>
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                            <button 
+                                onClick={handleAnalyze}
+                                disabled={loading || !text}
+                                className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition flex items-center justify-center space-x-2 ${
+                                    loading ? 'bg-slate-800 cursor-wait' : 'bg-slate-900 hover:bg-slate-800 hover:-translate-y-1'
+                                }`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin"/>
+                                        <span>Analisando Argumentos...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <BrainCircuit className="w-5 h-5"/>
+                                        <span>Executar Opositor IA</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                {/* --- RIGHT COLUMN: ANALYSIS OUTPUT --- */}
+                <div className="lg:col-span-8">
                      {analysis ? (
-                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full animate-in fade-in slide-in-from-right-4 duration-500">
-                             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                                 <h3 className="font-bold text-slate-900 flex items-center"><Zap className="w-5 h-5 mr-2 text-amber-500"/> Resultado da Análise</h3>
-                                 <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Probabilidade de Êxito: {analysis.winProbability}</span>
+                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                             
+                             {/* SCORECARD */}
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                                    <div className="relative w-16 h-16 flex items-center justify-center">
+                                        <svg className="w-full h-full transform -rotate-90">
+                                            <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-100" />
+                                            <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={175} strokeDashoffset={175 - (175 * analysis.winProbabilityValue) / 100} className={`text-${analysis.winProbabilityValue > 70 ? 'green' : analysis.winProbabilityValue > 40 ? 'yellow' : 'red'}-500 transition-all duration-1000`} />
+                                        </svg>
+                                        <span className="absolute text-sm font-bold text-slate-900">{analysis.winProbabilityValue}%</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 font-bold uppercase">Probabilidade de Êxito</p>
+                                        <p className="font-bold text-slate-900">{analysis.winProbability}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="md:col-span-2 bg-gradient-to-r from-slate-900 to-indigo-900 text-white p-5 rounded-2xl shadow-lg flex flex-col justify-center relative overflow-hidden">
+                                     <Zap className="absolute right-4 top-4 w-12 h-12 text-white/10" />
+                                     <p className="text-xs text-indigo-300 font-bold uppercase mb-2">Recomendação Tática</p>
+                                     <p className="text-sm font-medium leading-relaxed">{analysis.recommendedFocus}</p>
+                                </div>
                              </div>
 
-                             <div className="space-y-6">
-                                 <div>
-                                     <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 flex items-center"><AlertTriangle className="w-3 h-3 mr-1"/> Pontos Fracos Detectados</h4>
-                                     <ul className="space-y-2">
+                             {/* DETAILED CARDS */}
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 {/* FRAQUEZAS */}
+                                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                     <div className="bg-red-50 border-b border-red-100 p-4 flex justify-between items-center">
+                                         <h4 className="font-bold text-red-800 flex items-center"><AlertTriangle className="w-5 h-5 mr-2"/> Fragilidades Detectadas</h4>
+                                         <span className="text-xs font-bold bg-white text-red-600 px-2 py-1 rounded-md border border-red-200">{analysis.weaknesses.length} pontos</span>
+                                     </div>
+                                     <div className="p-4 space-y-3">
                                          {analysis.weaknesses.map((w, i) => (
-                                             <li key={i} className="text-sm text-slate-700 bg-red-50 p-2 rounded border-l-2 border-red-500">{w}</li>
+                                             <div key={i} className="flex items-start text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                 <span className="text-red-500 font-bold mr-2">{i+1}.</span>
+                                                 {w}
+                                             </div>
                                          ))}
-                                     </ul>
-                                 </div>
-                                 
-                                 <div>
-                                     <h4 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 flex items-center"><Shield className="w-3 h-3 mr-1"/> Sugestão de Contra-Argumentos</h4>
-                                     <ul className="space-y-2">
-                                         {analysis.counterArguments.map((w, i) => (
-                                             <li key={i} className="text-sm text-slate-700 bg-indigo-50 p-2 rounded border-l-2 border-indigo-500">{w}</li>
-                                         ))}
-                                     </ul>
+                                     </div>
                                  </div>
 
-                                 <div className="bg-slate-900 text-white p-4 rounded-xl">
-                                     <p className="text-xs text-slate-400 uppercase font-bold mb-1">Recomendação Final</p>
-                                     <p className="text-sm font-medium">{analysis.recommendedFocus}</p>
+                                 {/* CONTRA-ARGUMENTOS */}
+                                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                     <div className="bg-blue-50 border-b border-blue-100 p-4 flex justify-between items-center">
+                                         <h4 className="font-bold text-blue-800 flex items-center"><Shield className="w-5 h-5 mr-2"/> Estratégia de Defesa</h4>
+                                         <span className="text-xs font-bold bg-white text-blue-600 px-2 py-1 rounded-md border border-blue-200">{analysis.counterArguments.length} teses</span>
+                                     </div>
+                                     <div className="p-4 space-y-3">
+                                         {analysis.counterArguments.map((w, i) => (
+                                             <div key={i} className="flex items-start text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                 <Check className="w-4 h-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0"/>
+                                                 {w}
+                                             </div>
+                                         ))}
+                                     </div>
                                  </div>
                              </div>
+
+                             {/* JURISPRUDENCIA */}
+                             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                 <div className="bg-amber-50 border-b border-amber-100 p-4">
+                                     <h4 className="font-bold text-amber-800 flex items-center"><Scale className="w-5 h-5 mr-2"/> Jurisprudência Relacionada</h4>
+                                 </div>
+                                 <div className="p-4 grid md:grid-cols-2 gap-4">
+                                     {analysis.jurisprudence.map((item, i) => (
+                                         <div key={i} className="border border-slate-200 rounded-xl p-4 hover:border-amber-300 hover:shadow-md transition bg-slate-50/50">
+                                             <div className="flex items-center mb-2">
+                                                 <BookOpen className="w-4 h-4 text-amber-600 mr-2"/>
+                                                 <h5 className="font-bold text-slate-900 text-sm">{item.title}</h5>
+                                             </div>
+                                             <p className="text-xs text-slate-600 leading-relaxed">{item.summary}</p>
+                                         </div>
+                                     ))}
+                                 </div>
+                             </div>
+
+                             {/* ACTIONS */}
+                             <div className="flex justify-end space-x-3 pt-4">
+                                 <button className="flex items-center px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition">
+                                     <Copy className="w-4 h-4 mr-2"/> Copiar Relatório
+                                 </button>
+                                 <button className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-bold transition">
+                                     <Printer className="w-4 h-4 mr-2"/> Exportar PDF
+                                 </button>
+                             </div>
+
                          </div>
                      ) : (
-                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col items-center justify-center text-center opacity-50">
-                             <BrainCircuit className="w-16 h-16 text-slate-200 mb-4"/>
-                             <p className="text-slate-400 font-medium">Aguardando entrada de dados...</p>
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col items-center justify-center text-center opacity-70 min-h-[400px]">
+                             <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                                <BrainCircuit className="w-12 h-12 text-slate-300"/>
+                             </div>
+                             <h3 className="text-xl font-bold text-slate-900 mb-2">Aguardando Dados</h3>
+                             <p className="text-slate-500 max-w-sm mx-auto">Cole a peça processual ao lado e clique em "Executar Opositor IA" para gerar insights estratégicos.</p>
                          </div>
                      )}
                 </div>
@@ -254,107 +369,216 @@ const StrategyAnalyzer: React.FC<{ isPremium: boolean, onUnlock: () => void }> =
 
 const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = ({ isPremium, onUnlock }) => {
     const [amount, setAmount] = useState(10000);
-    const [date, setDate] = useState('2022-01-01');
+    const [startDate, setStartDate] = useState('2022-01-01');
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [index, setIndex] = useState('IGPM');
+    const [interestRate, setInterestRate] = useState(1); // 1%
+    const [finePercent, setFinePercent] = useState(0); // Multa
+    const [feesPercent, setFeesPercent] = useState(0); // Honorários
+    
     const [result, setResult] = useState<CalculationResult | null>(null);
     const [loading, setLoading] = useState(false);
 
     const handleCalculate = async () => {
         setLoading(true);
-        const res = await calculateLegalAdjustment(amount, date, index);
+        const res = await calculateLegalAdjustment(amount, startDate, endDate, index, interestRate, finePercent, feesPercent);
         setResult(res);
         setLoading(false);
     };
 
     return (
-        <div className="relative min-h-[600px]">
+        <div className="relative min-h-[600px] bg-slate-50">
             {!isPremium && <PremiumLockOverlay onUnlock={onUnlock} />}
-            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${!isPremium ? 'opacity-30 pointer-events-none' : ''}`}>
-                 <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                     <h3 className="font-bold text-slate-900 mb-6 flex items-center"><Calculator className="w-5 h-5 mr-2 text-indigo-600"/> Parâmetros</h3>
+            
+            <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${!isPremium ? 'opacity-30 pointer-events-none' : ''}`}>
+                 
+                 {/* --- INPUT PANEL --- */}
+                 <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
+                     <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                         <h3 className="font-bold text-slate-900 flex items-center text-lg"><Calculator className="w-5 h-5 mr-2 text-indigo-600"/> Parâmetros</h3>
+                         <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-bold">Cível/Trabalhista</span>
+                     </div>
                      
                      <div className="space-y-5">
                          <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Valor Original (R$)</label>
-                             <input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"/>
-                         </div>
-                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Data Inicial</label>
-                             <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"/>
-                         </div>
-                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Índice de Correção</label>
-                             <select value={index} onChange={e => setIndex(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
-                                 <option value="IGPM">IGP-M (FGV)</option>
-                                 <option value="IPCA">IPCA (IBGE)</option>
-                                 <option value="INPC">INPC (IBGE)</option>
-                             </select>
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Valor Original (R$)</label>
+                             <div className="relative">
+                                 <span className="absolute left-3 top-3 text-slate-400 font-bold">R$</span>
+                                 <input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-900"/>
+                             </div>
                          </div>
                          
-                         <div className="pt-4">
+                         <div className="grid grid-cols-2 gap-4">
+                             <div>
+                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data Inicial</label>
+                                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"/>
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data Final</label>
+                                 <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"/>
+                             </div>
+                         </div>
+
+                         <div>
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Índice de Correção</label>
+                             <div className="relative">
+                                <select value={index} onChange={e => setIndex(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none appearance-none font-medium">
+                                    <option value="IGPM">IGP-M (FGV) - Variação Geral</option>
+                                    <option value="IPCA">IPCA (IBGE) - Oficial Inflação</option>
+                                    <option value="INPC">INPC (IBGE) - Salários</option>
+                                    <option value="SELIC">SELIC (Receita Federal/CC)</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
+                             </div>
+                         </div>
+
+                         <div className="grid grid-cols-3 gap-3">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Juros (a.m)</label>
+                                <div className="relative">
+                                    <input type="number" value={interestRate} onChange={e => setInterestRate(Number(e.target.value))} className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg outline-none text-sm"/>
+                                    <span className="absolute right-2 top-2 text-slate-400 text-xs">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Multa</label>
+                                <div className="relative">
+                                    <input type="number" value={finePercent} onChange={e => setFinePercent(Number(e.target.value))} className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg outline-none text-sm"/>
+                                    <span className="absolute right-2 top-2 text-slate-400 text-xs">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Honorários</label>
+                                <div className="relative">
+                                    <input type="number" value={feesPercent} onChange={e => setFeesPercent(Number(e.target.value))} className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg outline-none text-sm"/>
+                                    <span className="absolute right-2 top-2 text-slate-400 text-xs">%</span>
+                                </div>
+                            </div>
+                         </div>
+                         
+                         <div className="pt-4 mt-auto">
                             <button 
                                 onClick={handleCalculate}
                                 disabled={loading}
-                                className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center"
+                                className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center shadow-lg transform hover:-translate-y-1"
                             >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : 'Calcular Atualização'}
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : 'Calcular e Atualizar'}
                             </button>
                          </div>
                      </div>
                  </div>
 
-                 <div className="lg:col-span-2 space-y-6">
+                 {/* --- RESULTS PANEL --- */}
+                 <div className="lg:col-span-8 space-y-6">
                      {result ? (
                          <>
-                            <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white shadow-xl animate-in zoom-in duration-300">
-                                <p className="text-indigo-200 text-sm font-medium uppercase tracking-wider mb-1">Valor Atualizado Total</p>
-                                <h2 className="text-5xl font-extrabold mb-6">R$ {result.updatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
-                                
-                                <div className="grid grid-cols-3 gap-4 border-t border-indigo-500/30 pt-4">
+                            {/* TOTAL CARD */}
+                            <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden animate-in zoom-in duration-300">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+                                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center">
                                     <div>
-                                        <p className="text-xs text-indigo-300">Principal</p>
-                                        <p className="font-bold text-lg">R$ {result.originalValue.toLocaleString('pt-BR')}</p>
+                                        <p className="text-indigo-300 text-sm font-bold uppercase tracking-wider mb-2">Valor Total Atualizado</p>
+                                        <h2 className="text-5xl md:text-6xl font-extrabold mb-1 tracking-tight">R$ {result.updatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                                        <p className="text-slate-400 text-sm">Atualizado até {new Date().toLocaleDateString()}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-indigo-300">Juros (1% a.m.)</p>
-                                        <p className="font-bold text-lg">R$ {result.interest.toLocaleString('pt-BR')}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-indigo-300">Índice</p>
-                                        <p className="font-bold text-lg">{result.indexUsed}</p>
+                                    <div className="mt-6 md:mt-0 text-right">
+                                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
+                                            <p className="text-xs text-indigo-200 uppercase font-bold">Valor Original</p>
+                                            <p className="text-xl font-bold">R$ {result.originalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                            <div className="w-full h-px bg-white/20 my-2"></div>
+                                            <p className="text-xs text-green-300 uppercase font-bold">+ Valorização</p>
+                                            <p className="text-xl font-bold text-green-400">+ {((result.updatedValue / result.originalValue - 1) * 100).toFixed(1)}%</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                <h4 className="font-bold text-slate-900 mb-4 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-slate-500"/> Composição do Valor</h4>
-                                <div className="space-y-4">
-                                    {result.breakdown.map((item, i) => (
-                                        <div key={i}>
-                                            <div className="flex justify-between text-sm mb-1">
-                                                <span className="text-slate-600 font-medium">{item.month}</span>
-                                                <span className="text-slate-900 font-bold">R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                            </div>
-                                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                                <div 
-                                                    className="bg-indigo-600 h-2.5 rounded-full" 
-                                                    style={{ width: `${(item.value / result.updatedValue) * 100}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    ))}
+                            {/* BREAKDOWN GRID */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-2">
+                                        <TrendingUp className="w-5 h-5"/>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-bold uppercase">Correção ({result.indexUsed})</p>
+                                    <p className="text-lg font-bold text-slate-900">R$ {result.totalCorrection.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</p>
                                 </div>
-                                <button className="mt-6 w-full py-2 border-2 border-slate-200 text-slate-600 font-bold rounded-lg hover:border-slate-400 hover:text-slate-800 transition">
-                                    Exportar Relatório PDF
+                                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center text-red-600 mb-2">
+                                        <Clock className="w-5 h-5"/>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-bold uppercase">Juros Totais</p>
+                                    <p className="text-lg font-bold text-slate-900">R$ {result.totalInterest.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 mb-2">
+                                        <AlertTriangle className="w-5 h-5"/>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-bold uppercase">Multa ({finePercent}%)</p>
+                                    <p className="text-lg font-bold text-slate-900">R$ {result.totalFine.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-green-200 shadow-sm bg-green-50/30">
+                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-green-600 mb-2">
+                                        <Award className="w-5 h-5"/>
+                                    </div>
+                                    <p className="text-xs text-green-700 font-bold uppercase">Honorários ({feesPercent}%)</p>
+                                    <p className="text-lg font-bold text-green-800">R$ {result.totalFees.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</p>
+                                </div>
+                            </div>
+
+                            {/* VISUAL CHART */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-80 flex flex-col">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h4 className="font-bold text-slate-900 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-slate-500"/> Evolução da Dívida</h4>
+                                    <div className="flex items-center space-x-3 text-xs">
+                                        <div className="flex items-center"><div className="w-3 h-3 bg-slate-300 rounded-sm mr-1"></div> Principal</div>
+                                        <div className="flex items-center"><div className="w-3 h-3 bg-indigo-500 rounded-sm mr-1"></div> Juros+Correção</div>
+                                    </div>
+                                </div>
+                                
+                                {/* CSS CHART */}
+                                <div className="flex-1 flex items-end justify-between space-x-2 w-full px-2">
+                                    {result.chartData.map((data, i) => {
+                                        const total = data.value;
+                                        const maxVal = result.updatedValue; // Use final total as max height reference
+                                        const heightPercent = Math.max(5, (total / maxVal) * 100);
+                                        const principalHeight = (data.principalPart / total) * 100;
+                                        
+                                        return (
+                                            <div key={i} className="flex flex-col items-center flex-1 h-full justify-end group relative">
+                                                {/* Tooltip */}
+                                                <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition bg-slate-800 text-white text-[10px] p-2 rounded shadow-lg whitespace-nowrap z-10 pointer-events-none">
+                                                    <p className="font-bold">{data.label}</p>
+                                                    <p>R$ {data.value.toLocaleString('pt-BR', {maximumFractionDigits:0})}</p>
+                                                </div>
+                                                
+                                                <div className="w-full bg-slate-100 rounded-t-md overflow-hidden flex flex-col-reverse relative transition-all duration-500 hover:brightness-95" style={{ height: `${heightPercent}%` }}>
+                                                    <div className="w-full bg-slate-300 transition-all duration-1000" style={{ height: `${principalHeight}%` }}></div>
+                                                    <div className="w-full bg-indigo-500 transition-all duration-1000 flex-1"></div>
+                                                </div>
+                                                <span className="text-[10px] text-slate-400 mt-2 font-medium truncate w-full text-center">{data.label}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* EXPORT ACTIONS */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <button className="py-3 border border-slate-300 rounded-xl text-slate-600 font-bold hover:bg-slate-50 transition flex justify-center items-center">
+                                    <Download className="w-5 h-5 mr-2"/> Baixar Planilha (Excel)
+                                </button>
+                                <button className="py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition flex justify-center items-center">
+                                    <Printer className="w-5 h-5 mr-2"/> Gerar Relatório PDF
                                 </button>
                             </div>
                          </>
                      ) : (
-                         <div className="h-full bg-white rounded-2xl border border-slate-200 border-dashed flex items-center justify-center p-10 opacity-60">
-                             <div className="text-center">
-                                <TrendingUp className="w-16 h-16 text-slate-300 mx-auto mb-4"/>
-                                <p className="text-slate-400 font-medium">Os resultados aparecerão aqui</p>
+                         <div className="h-full bg-white rounded-2xl border border-slate-200 border-dashed flex flex-col items-center justify-center p-10 opacity-60 min-h-[400px]">
+                            <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                                <TrendingUp className="w-12 h-12 text-slate-300"/>
                              </div>
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">Simulador Financeiro</h3>
+                            <p className="text-slate-500 text-center max-w-sm">Preencha os parâmetros à esquerda para visualizar a evolução monetária detalhada e gerar gráficos.</p>
                          </div>
                      )}
                  </div>
@@ -364,8 +588,6 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
 };
 
 // --- SHARED LAYOUT ---
-
-type ViewType = 'dashboard' | 'profile' | 'notifications' | 'pro_strategy' | 'pro_calculator' | 'premium_sales';
 
 const DashboardLayout: React.FC<{ 
     children: React.ReactNode; 
@@ -388,6 +610,13 @@ const DashboardLayout: React.FC<{
   };
 
   const proFeatures = [
+      {
+          icon: BarChart3,
+          color: 'text-cyan-600',
+          bg: 'bg-cyan-100',
+          title: "Analytics Jurídico",
+          desc: "Análise de dados unificada de todas as suas ferramentas e performance de casos."
+      },
       {
           icon: BrainCircuit,
           color: 'text-indigo-600',
@@ -430,6 +659,16 @@ const DashboardLayout: React.FC<{
           title: "Gestão CRM",
           desc: "Gestão completa de clientes, processos e honorários em um só lugar."
       }
+  ];
+
+  const sidebarProTools = [
+      { id: 'pro_analytics', label: 'Analytics PRO', icon: BarChart3, desc: 'Inteligência de Dados' },
+      { id: 'pro_strategy', label: 'Opositor IA', icon: BrainCircuit, desc: 'Análise Estratégica' },
+      { id: 'pro_calculator', label: 'Calculadora Visual', icon: Calculator, desc: 'Atualização Monetária' },
+      { id: 'pro_writer', label: 'Redator One-Click', icon: FileText, desc: 'Petições Automáticas' },
+      { id: 'pro_docs', label: 'Análise Docs', icon: FileSearch, desc: 'Leitura IA' },
+      { id: 'pro_calendar', label: 'Agenda Inteligente', icon: Calendar, desc: 'Prazos' },
+      { id: 'pro_crm', label: 'Gestão CRM', icon: Folders, desc: 'Gestão Total' },
   ];
 
   const PremiumModal = () => (
@@ -541,7 +780,7 @@ const DashboardLayout: React.FC<{
              </button>
            </div>
 
-           {/* LAWYER PRO SECTION (Visually Distinct) */}
+           {/* LAWYER PRO SECTION (Unified & Visual) */}
            {currentUser?.role === UserRole.LAWYER && (
                 <div className="mt-4 flex-1 bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950 border-t border-slate-800 relative">
                     {/* Gold accent line */}
@@ -556,46 +795,31 @@ const DashboardLayout: React.FC<{
                         </div>
 
                         <div className="space-y-1">
-                            {[
-                                { id: 'pro_strategy', name: 'Opositor IA', icon: BrainCircuit, desc: 'Análise Estratégica' },
-                                { id: 'pro_calculator', name: 'Calculadora Visual', icon: Calculator, desc: 'Atualização Monetária' },
-                            ].map((item) => (
+                            {sidebarProTools.map((item) => (
                                 <button
                                     key={item.id}
-                                    onClick={() => onViewChange(item.id as ViewType)}
+                                    onClick={() => {
+                                        if (currentUser.isPremium) {
+                                            onViewChange(item.id as ViewType);
+                                        } else {
+                                            setShowPremiumModal(true);
+                                        }
+                                    }}
                                     className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg border transition-all group ${
-                                        activeView === item.id
+                                        activeView === item.id && currentUser.isPremium
                                         ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' 
                                         : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-amber-200'
                                     }`}
                                 >
-                                    <div className={`p-1.5 rounded-md ${activeView === item.id ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-500 group-hover:text-amber-400'}`}>
+                                    <div className={`p-1.5 rounded-md ${activeView === item.id && currentUser.isPremium ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-500 group-hover:text-amber-400'}`}>
                                         <item.icon className="w-4 h-4" />
                                     </div>
-                                    <div className="text-left">
-                                        <div className="text-sm font-semibold">{item.name}</div>
-                                        <div className="text-[10px] opacity-60">{item.desc}</div>
-                                    </div>
-                                </button>
-                            ))}
-                            
-                            {/* Disabled/Future Tools - NOW TRIGGER THE MODAL */}
-                            {[
-                                { name: 'Análise Docs', icon: FileSearch },
-                                { name: 'Agenda Inteligente', icon: Calendar },
-                                { name: 'Gestão CRM', icon: Folders }
-                            ].map((tool, idx) => (
-                                <button 
-                                    key={idx} 
-                                    onClick={() => setShowPremiumModal(true)} // Opens the modal
-                                    className="w-full flex items-center space-x-3 px-3 py-2 text-slate-600 hover:text-amber-500 hover:bg-slate-800 rounded-lg transition-all group"
-                                >
-                                    <div className="p-1.5 rounded-md bg-slate-800 group-hover:bg-slate-700">
-                                        {tool.icon ? <tool.icon className="w-4 h-4" /> : <Lock className="w-4 h-4"/>}
-                                    </div>
-                                    <div className="flex justify-between w-full items-center">
-                                        <span className="text-sm">{tool.name}</span>
-                                        {!currentUser.isPremium && <Lock className="w-3 h-3 opacity-50"/>}
+                                    <div className="text-left flex-1">
+                                        <div className="flex justify-between items-center w-full">
+                                            <div className="text-sm font-semibold">{item.label}</div>
+                                            {!currentUser.isPremium && <Lock className="w-3 h-3 opacity-30"/>}
+                                        </div>
+                                        <div className="text-[10px] opacity-60 truncate">{item.desc}</div>
                                     </div>
                                 </button>
                             ))}
@@ -638,11 +862,16 @@ const DashboardLayout: React.FC<{
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight hidden md:block">
                   {activeView === 'dashboard' ? title : 
                    activeView === 'profile' ? 'Meu Perfil' : 
+                   activeView === 'pro_analytics' ? 'Analytics Jurídico' :
                    activeView === 'pro_strategy' ? 'Opositor IA (Strategy Analyzer)' :
                    activeView === 'pro_calculator' ? 'Calculadora Jurídica' :
+                   activeView === 'pro_writer' ? 'Redator One-Click' :
+                   activeView === 'pro_docs' ? 'Análise de Documentos' :
+                   activeView === 'pro_calendar' ? 'Agenda Inteligente' :
+                   activeView === 'pro_crm' ? 'Gestão CRM' :
                    'Central de Notificações'}
               </h1>
-              {activeView === 'pro_strategy' && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">FERRAMENTA BETA</span>}
+              {activeView.startsWith('pro_') && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">FERRAMENTA PRO</span>}
               <div className="md:hidden flex items-center space-x-2">
                   <span className="text-xl font-bold text-slate-900">SocialJuris</span>
               </div>
@@ -676,832 +905,407 @@ const DashboardLayout: React.FC<{
   );
 };
 
-// --- CLIENT DASHBOARD ---
-export const ClientDashboard = () => {
-  const { cases, currentUser, createCase } = useApp();
-  const [activeView, setActiveView] = useState<ViewType>('dashboard');
-  
-  const [showModal, setShowModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
-  
-  const activeCase = cases.find(c => c.id === activeCaseId) || null;
-  
-  // Case Creation State
+// --- DASHBOARDS IMPLEMENTATION ---
+
+export const ClientDashboard: React.FC = () => {
+  const { currentUser, cases, createCase } = useApp();
+  const [view, setView] = useState<ViewType>('dashboard');
+  const [showNewCaseModal, setShowNewCaseModal] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+
+  // New Case State
   const [description, setDescription] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [city, setCity] = useState('');
   const [uf, setUf] = useState('');
-  const [analyzing, setAnalyzing] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{ area: string; title: string; summary: string; complexity: 'Baixa'|'Média'|'Alta' } | null>(null);
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   const myCases = cases.filter(c => c.clientId === currentUser?.id);
 
   const handleAnalyze = async () => {
-    if (description.length < 10) return;
-    if (!city || !uf) {
-        alert("Por favor, preencha Cidade e UF.");
-        return;
-    }
+    if (!description) return;
     setAnalyzing(true);
-    const result = await analyzeCaseDescription(description);
-    setAiSuggestion(result);
+    const analysis = await analyzeCaseDescription(description);
+    setAiAnalysis(analysis);
     setAnalyzing(false);
   };
 
   const handleCreate = async () => {
-    if (!aiSuggestion) return;
-    setPaymentProcessing(true);
-    
-    // Simula delay de pagamento
-    setTimeout(async () => {
-        const price = calculateCasePrice(aiSuggestion.complexity);
-        await createCase({ 
-          title: aiSuggestion.title, 
-          description, 
-          area: aiSuggestion.area,
-          city,
-          uf,
-          price,
-          complexity: aiSuggestion.complexity
-        });
-        setPaymentProcessing(false);
-        setShowPaymentModal(false);
-        setShowModal(false);
-        setDescription('');
-        setCity('');
-        setUf('');
-        setAiSuggestion(null);
-    }, 2500);
+    if (!aiAnalysis) return;
+    const price = calculateCasePrice(aiAnalysis.complexity);
+    await createCase({
+        title: aiAnalysis.title,
+        description: description,
+        area: aiAnalysis.area,
+        city,
+        uf,
+        price,
+        complexity: aiAnalysis.complexity
+    });
+    setShowNewCaseModal(false);
+    setDescription('');
+    setAiAnalysis(null);
+    setCity('');
+    setUf('');
+    setView('dashboard');
   };
 
-  const renderDashboardContent = () => (
-    <>
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-           <div className="text-slate-500 text-sm font-medium mb-1">Casos Ativos</div>
-           <div className="text-3xl font-bold text-slate-900">{myCases.filter(c => c.status === CaseStatus.ACTIVE).length}</div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-           <div className="text-slate-500 text-sm font-medium mb-1">Total de Casos</div>
-           <div className="text-3xl font-bold text-slate-900">{myCases.length}</div>
-        </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="bg-indigo-600 p-6 rounded-2xl shadow-lg shadow-indigo-600/20 text-white flex flex-col justify-center items-center hover:bg-indigo-700 transition transform hover:scale-[1.02]"
-        >
-          <Plus className="w-8 h-8 mb-2" />
-          <span className="font-semibold">Nova Demanda Jurídica</span>
-        </button>
-      </div>
-
-      {/* Case List */}
-      <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Briefcase className="w-5 h-5 mr-2 text-indigo-600"/> Meus Casos</h2>
-      <div className="grid gap-6 lg:grid-cols-2 animate-in slide-in-from-bottom-8 duration-700">
-        {myCases.length === 0 ? (
-          <div className="col-span-2 text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-             <div className="text-slate-400 mb-2">Você ainda não tem casos cadastrados</div>
-             <button onClick={() => setShowModal(true)} className="text-indigo-600 font-medium hover:underline">Criar primeiro caso</button>
-          </div>
-        ) : (
-          myCases.map(c => (
-            <div key={c.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex space-x-2 mb-2">
-                      <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">{c.area}</span>
-                      {c.isPaid && <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 border border-green-100 flex items-center"><Check className="w-3 h-3 mr-1"/> Pago</span>}
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900">{c.title}</h3>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  c.status === CaseStatus.OPEN ? 'bg-yellow-100 text-yellow-700' :
-                  c.status === CaseStatus.ACTIVE ? 'bg-green-100 text-green-700' :
-                  'bg-slate-100 text-slate-700'
-                }`}>
-                  {c.status === CaseStatus.OPEN ? 'Aguardando' : c.status === CaseStatus.ACTIVE ? 'Em Andamento' : 'Concluído'}
-                </span>
-              </div>
-              <p className="text-slate-600 text-sm mb-4 line-clamp-2">{c.description}</p>
-              
-              {/* Location Badge */}
-              {c.city && c.uf && (
-                  <div className="flex items-center text-xs text-slate-500 mb-4 bg-slate-50 inline-flex px-2 py-1 rounded border border-slate-100">
-                      <MapPin className="w-3 h-3 mr-1" />
-                      {c.city} - {c.uf}
-                  </div>
-              )}
-
-              {/* Timeline Mini */}
-              <div className="flex items-center space-x-2 text-xs text-slate-400 mb-6">
-                 <div className="flex items-center"><div className="w-2 h-2 bg-indigo-600 rounded-full mr-1"></div> Criado</div>
-                 <div className="w-8 h-px bg-slate-200"></div>
-                 <div className="flex items-center">
-                    <div className={`w-2 h-2 rounded-full mr-1 ${c.lawyerId ? 'bg-indigo-600' : 'bg-slate-300'}`}></div> 
-                    {c.lawyerId ? 'Advogado Atribuído' : 'Aguardando'}
-                 </div>
-              </div>
-
-              <button 
-                onClick={() => setActiveCaseId(c.id)}
-                className="w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-medium hover:bg-indigo-50 hover:text-indigo-700 transition flex justify-center items-center border border-slate-200"
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                {c.status === CaseStatus.OPEN ? 'Ver Detalhes' : 'Abrir Chat com Advogado'}
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-    </>
-  );
-
   return (
-    <DashboardLayout 
-        title={`Olá, ${currentUser?.name.split(' ')[0]}`}
-        activeView={activeView}
-        onViewChange={setActiveView}
-    >
-      {activeView === 'dashboard' && renderDashboardContent()}
-      {activeView === 'profile' && <UserProfile />}
-      {activeView === 'notifications' && <NotificationList />}
+    <DashboardLayout title="Painel do Cliente" activeView={view} onViewChange={setView}>
+      {view === 'profile' && <UserProfile />}
+      {view === 'notifications' && <NotificationList />}
+      {view === 'dashboard' && (
+        <div className="space-y-6 animate-in fade-in duration-500">
+           <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+               <div>
+                   <h2 className="text-xl font-bold text-slate-900">Meus Casos</h2>
+                   <p className="text-slate-500 text-sm">Gerencie suas solicitações jurídicas.</p>
+               </div>
+               <button 
+                onClick={() => setShowNewCaseModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition hover:-translate-y-1 flex items-center"
+               >
+                   <Plus className="w-5 h-5 mr-2" /> Novo Caso
+               </button>
+           </div>
 
-      {/* New Case Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-bold text-slate-900">Nova Demanda</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6"/></button>
-            </div>
-            <div className="p-6">
-              {!aiSuggestion ? (
-                <>
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Cidade</label>
-                        <input 
-                            type="text" 
-                            className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            placeholder="Ex: São Paulo"
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                        />
+           <div className="grid grid-cols-1 gap-4">
+              {myCases.length === 0 ? (
+                  <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Briefcase className="w-8 h-8 text-slate-400" />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">UF</label>
-                        <select 
-                            className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            value={uf}
-                            onChange={(e) => setUf(e.target.value)}
-                        >
-                            <option value="">Selecione</option>
-                            {BRAZIL_STATES.map(state => (
-                                <option key={state} value={state}>{state}</option>
-                            ))}
-                        </select>
-                      </div>
+                      <h3 className="text-lg font-bold text-slate-900">Nenhum caso encontrado</h3>
+                      <p className="text-slate-500 mb-6">Você ainda não registrou nenhuma demanda.</p>
+                      <button onClick={() => setShowNewCaseModal(true)} className="text-indigo-600 font-bold hover:underline">Criar primeiro caso</button>
                   </div>
-
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Descreva seu problema jurídico com detalhes</label>
-                  <textarea 
-                    className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[150px] mb-4 text-slate-800"
-                    placeholder="Ex: Comprei um imóvel na planta e a construtora está atrasada há 6 meses. O contrato dizia..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                  <button 
-                    onClick={handleAnalyze}
-                    disabled={description.length < 10 || !city || !uf || analyzing}
-                    className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center transition"
-                  >
-                    {analyzing ? <span className="animate-pulse">Analisando com IA...</span> : 'Continuar'}
-                  </button>
-                </>
               ) : (
-                <div className="space-y-4">
-                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                    <div className="flex items-start mb-2">
-                       <Award className="w-5 h-5 text-indigo-600 mr-2 mt-0.5" />
-                       <div>
-                         <span className="text-xs font-bold text-indigo-500 uppercase">Sugestão da IA</span>
-                         <h4 className="font-bold text-indigo-900 text-lg">{aiSuggestion.title}</h4>
-                       </div>
-                    </div>
-                    <p className="text-indigo-800/80 text-sm mb-4">{aiSuggestion.summary}</p>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-indigo-700 border border-indigo-200">
-                        Área: {aiSuggestion.area}
-                        </div>
-                        <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-slate-700 border border-slate-200 flex items-center">
-                        <MapPin className="w-3 h-3 mr-1"/> {city} - {uf}
-                        </div>
-                        <div className="inline-block bg-white px-3 py-1 rounded-md text-xs font-bold text-purple-700 border border-purple-200">
-                        Complexidade: {aiSuggestion.complexity}
-                        </div>
-                    </div>
-                    <div className="border-t border-indigo-200 pt-3 flex justify-between items-center">
-                        <span className="text-sm text-indigo-800 font-medium">Valor de Publicação:</span>
-                        <span className="text-xl font-bold text-indigo-900">R$ {calculateCasePrice(aiSuggestion.complexity).toFixed(2).replace('.', ',')}</span>
-                    </div>
-                  </div>
-                  <div className="flex space-x-3 mt-6">
-                     <button onClick={() => setAiSuggestion(null)} className="flex-1 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition">Voltar</button>
-                     <button onClick={() => setShowPaymentModal(true)} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20">
-                         Pagar e Publicar
-                     </button>
-                  </div>
-                </div>
+                  myCases.map(c => (
+                      <div key={c.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-300 transition group">
+                          <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                      <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${c.status === 'OPEN' ? 'bg-green-100 text-green-700' : c.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                                          {c.status === 'OPEN' ? 'Aguardando Advogado' : c.status === 'ACTIVE' ? 'Em Andamento' : 'Encerrado'}
+                                      </span>
+                                      <span className="text-slate-400 text-xs">• {new Date(c.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                  <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition">{c.title}</h3>
+                                  <p className="text-slate-500 text-sm line-clamp-2 mb-4">{c.description}</p>
+                                  
+                                  {c.lawyerId ? (
+                                     <div className="flex items-center text-sm text-slate-600 bg-slate-50 p-2 rounded-lg inline-block">
+                                        <Briefcase className="w-4 h-4 mr-2 inline" />
+                                        Advogado Responsável atribuído
+                                     </div>
+                                  ) : (
+                                     <div className="flex items-center text-sm text-slate-400 italic">
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Procurando especialistas...
+                                     </div>
+                                  )}
+                              </div>
+                              <div className="ml-4 flex flex-col items-end space-y-2">
+                                  {c.status === 'ACTIVE' && (
+                                      <button 
+                                        onClick={() => setSelectedCase(c)}
+                                        className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 transition shadow-md flex items-center"
+                                      >
+                                          <MessageSquare className="w-5 h-5" />
+                                      </button>
+                                  )}
+                              </div>
+                          </div>
+                      </div>
+                  ))
               )}
-            </div>
-          </div>
+           </div>
         </div>
       )}
 
-      {/* Payment Simulation Modal */}
-      {showPaymentModal && aiSuggestion && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-900 flex items-center"><CreditCard className="w-5 h-5 mr-2 text-indigo-600"/> Checkout Seguro</h3>
-                    <button onClick={() => !paymentProcessing && setShowPaymentModal(false)}><X className="w-5 h-5 text-slate-400"/></button>
-                </div>
-                <div className="p-8">
-                    {paymentProcessing ? (
-                        <div className="text-center py-8">
-                            <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mx-auto mb-4" />
-                            <h4 className="text-lg font-bold text-slate-900">Processando Pagamento...</h4>
-                            <p className="text-slate-500">Aguarde a confirmação do banco.</p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="text-center mb-8">
-                                <p className="text-sm text-slate-500 mb-1">Total a Pagar</p>
-                                <div className="text-4xl font-extrabold text-slate-900">R$ {calculateCasePrice(aiSuggestion.complexity).toFixed(2).replace('.',',')}</div>
+      {showNewCaseModal && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in duration-300">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                      <h3 className="text-xl font-bold text-slate-900">Novo Caso Jurídico</h3>
+                      <button onClick={() => setShowNewCaseModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition"><X className="w-5 h-5 text-slate-500" /></button>
+                  </div>
+                  
+                  <div className="p-6 space-y-6">
+                      {!aiAnalysis ? (
+                          <>
+                            <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                <h4 className="font-bold text-indigo-900 flex items-center mb-2"><Sparkles className="w-4 h-4 mr-2"/> Assistente IA</h4>
+                                <p className="text-sm text-indigo-700">Descreva seu problema com suas palavras. Nossa inteligência artificial irá categorizar e formatar juridicamente para você.</p>
                             </div>
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 space-y-3">
-                                <div className="flex items-center space-x-3">
-                                    <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
-                                    <div className="h-2 w-24 bg-slate-200 rounded"></div>
+                            <div className="space-y-2">
+                                <label className="font-bold text-slate-700">Relato do Caso</label>
+                                <textarea 
+                                    value={description} 
+                                    onChange={e => setDescription(e.target.value)}
+                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none min-h-[150px]"
+                                    placeholder="Ex: Comprei um produto pela internet que nunca chegou e a loja não devolve o dinheiro..."
+                                ></textarea>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="font-bold text-slate-700 text-sm">Cidade</label>
+                                    <input value={city} onChange={e => setCity(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Sua cidade" />
                                 </div>
-                                <div className="h-2 w-full bg-slate-200 rounded"></div>
+                                <div>
+                                    <label className="font-bold text-slate-700 text-sm">Estado (UF)</label>
+                                    <select value={uf} onChange={e => setUf(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                        <option value="">Selecione</option>
+                                        {BRAZIL_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
                             </div>
                             <button 
-                                onClick={handleCreate} 
-                                className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-green-600/30 transition transform hover:-translate-y-1"
+                                onClick={handleAnalyze} 
+                                disabled={!description || analyzing || !city || !uf}
+                                className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition disabled:opacity-50 flex justify-center items-center"
                             >
-                                Confirmar Pagamento
+                                {analyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Analisar e Continuar'}
                             </button>
-                            <p className="text-xs text-center text-slate-400 mt-4 flex items-center justify-center">
-                                <Shield className="w-3 h-3 mr-1"/> Ambiente criptografado e seguro
-                            </p>
-                        </>
+                          </>
+                      ) : (
+                          <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
+                              <div className="text-center">
+                                  <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                                      <Check className="w-6 h-6 text-green-600" />
+                                  </div>
+                                  <h3 className="text-lg font-bold text-slate-900">Análise Concluída</h3>
+                              </div>
+                              
+                              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+                                  <div>
+                                      <span className="text-xs font-bold text-slate-500 uppercase">Título Sugerido</span>
+                                      <p className="font-semibold text-slate-900">{aiAnalysis.title}</p>
+                                  </div>
+                                  <div>
+                                      <span className="text-xs font-bold text-slate-500 uppercase">Área do Direito</span>
+                                      <p className="font-semibold text-slate-900">{aiAnalysis.area}</p>
+                                  </div>
+                                  <div>
+                                      <span className="text-xs font-bold text-slate-500 uppercase">Complexidade</span>
+                                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${aiAnalysis.complexity === 'Alta' ? 'bg-red-100 text-red-700' : aiAnalysis.complexity === 'Média' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                                          {aiAnalysis.complexity}
+                                      </span>
+                                  </div>
+                                  <div className="pt-2 border-t border-slate-200">
+                                      <span className="text-xs font-bold text-slate-500 uppercase">Taxa de Publicação</span>
+                                      <p className="text-2xl font-bold text-indigo-600">R$ {calculateCasePrice(aiAnalysis.complexity).toFixed(2)}</p>
+                                  </div>
+                              </div>
+
+                              <div className="flex space-x-3">
+                                  <button onClick={() => setAiAnalysis(null)} className="flex-1 py-3 border border-slate-300 text-slate-600 font-bold rounded-xl hover:bg-slate-50">Voltar</button>
+                                  <button onClick={handleCreate} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">Confirmar e Pagar</button>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {selectedCase && (
+         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+             <div className="w-full max-w-4xl h-[600px] relative animate-in zoom-in duration-300">
+                 <Chat 
+                    currentCase={selectedCase}
+                    currentUser={currentUser!}
+                    otherPartyName={cases.find(c => c.id === selectedCase.id)?.lawyerId ? "Advogado" : "Sistema"}
+                    onClose={() => setSelectedCase(null)}
+                 />
+             </div>
+         </div>
+      )}
+    </DashboardLayout>
+  );
+};
+
+export const LawyerDashboard: React.FC = () => {
+    const { currentUser, cases, acceptCase, buyJuris } = useApp();
+    const [view, setView] = useState<ViewType>('dashboard');
+    const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+
+    const activeCases = cases.filter(c => c.lawyerId === currentUser?.id && c.status === 'ACTIVE');
+    const opportunities = cases.filter(c => c.status === 'OPEN');
+
+    return (
+        <DashboardLayout title="Painel do Advogado" activeView={view} onViewChange={setView}>
+            {view === 'profile' && <UserProfile />}
+            {view === 'notifications' && <NotificationList />}
+            
+            {view === 'pro_strategy' && <StrategyAnalyzer isPremium={!!currentUser?.isPremium} onUnlock={() => {}} />}
+            {view === 'pro_calculator' && <LegalCalculator isPremium={!!currentUser?.isPremium} onUnlock={() => {}} />}
+            {['pro_analytics', 'pro_writer', 'pro_docs', 'pro_calendar', 'pro_crm'].includes(view) && (
+                <FeatureComingSoon title={(view.replace('pro_', '').charAt(0).toUpperCase() + view.replace('pro_', '').slice(1))} icon={Hammer} desc="Esta ferramenta está em fase final de testes." />
+            )}
+
+            {view === 'dashboard' && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                             <div className="relative z-10">
+                                <p className="text-slate-400 text-xs font-bold uppercase mb-1">Saldo de Juris</p>
+                                <h3 className="text-3xl font-extrabold flex items-center">{currentUser?.balance || 0} <span className="text-sm ml-2 font-normal text-amber-400 opacity-80">créditos</span></h3>
+                                <button onClick={() => buyJuris(50)} className="mt-4 text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition border border-white/10">Recarregar</button>
+                             </div>
+                             <Coins className="absolute right-4 top-1/2 -translate-y-1/2 w-24 h-24 text-white/5" />
+                        </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                             <p className="text-slate-500 text-xs font-bold uppercase mb-1">Casos Ativos</p>
+                             <h3 className="text-3xl font-extrabold text-slate-900">{activeCases.length}</h3>
+                             <div className="mt-4 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                 <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${Math.min(100, activeCases.length * 10)}%` }}></div>
+                             </div>
+                        </div>
+                        <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden cursor-pointer hover:shadow-indigo-500/40 transition">
+                            <div className="relative z-10">
+                                <p className="text-indigo-100 text-xs font-bold uppercase mb-1">Assinatura PRO</p>
+                                <h3 className="text-xl font-bold mb-2">{currentUser?.isPremium ? 'Ativa' : 'Inativa'}</h3>
+                                <p className="text-xs text-indigo-100 opacity-80">Acesse ferramentas exclusivas</p>
+                            </div>
+                            <Sparkles className="absolute right-[-10px] top-[-10px] w-24 h-24 text-white/10 rotate-12" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-slate-900 flex items-center">
+                                <Search className="w-5 h-5 mr-2 text-indigo-600" />
+                                Oportunidades Recentes
+                            </h2>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {opportunities.length === 0 ? (
+                                <div className="col-span-full p-12 text-center bg-white rounded-2xl border border-dashed border-slate-300">
+                                    <p className="text-slate-500">Nenhuma oportunidade disponível no momento.</p>
+                                </div>
+                            ) : (
+                                opportunities.map(c => (
+                                    <div key={c.id} className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold uppercase">{c.area}</span>
+                                            <span className="text-green-600 font-bold text-sm">R$ {c.price?.toFixed(2)}</span>
+                                        </div>
+                                        <h3 className="font-bold text-slate-900 mb-2 line-clamp-1" title={c.title}>{c.title}</h3>
+                                        <p className="text-slate-500 text-sm mb-4 line-clamp-3 flex-1">{c.description}</p>
+                                        
+                                        <div className="flex items-center text-xs text-slate-400 mb-6 space-x-3">
+                                            <span className="flex items-center"><MapPin className="w-3 h-3 mr-1"/> {c.city}/{c.uf}</span>
+                                            <span className="flex items-center"><Activity className="w-3 h-3 mr-1"/> {c.complexity}</span>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => acceptCase(c.id)}
+                                            className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/10 flex items-center justify-center"
+                                        >
+                                            Aceitar (-5 Juris)
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {activeCases.length > 0 && (
+                        <div>
+                             <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                                <Briefcase className="w-5 h-5 mr-2 text-indigo-600" />
+                                Seus Casos Ativos
+                             </h2>
+                             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                                 {activeCases.map((c, i) => (
+                                     <div key={c.id} className={`p-6 flex items-center justify-between hover:bg-slate-50 transition ${i !== activeCases.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                                         <div>
+                                             <h4 className="font-bold text-slate-900">{c.title}</h4>
+                                             <p className="text-sm text-slate-500">Cliente ID: {c.clientId.substring(0,8)}...</p>
+                                         </div>
+                                         <button 
+                                            onClick={() => setSelectedCase(c)}
+                                            className="p-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 transition"
+                                         >
+                                             <MessageSquare className="w-5 h-5" />
+                                         </button>
+                                     </div>
+                                 ))}
+                             </div>
+                        </div>
                     )}
                 </div>
-            </div>
-        </div>
-      )}
+            )}
 
-      {/* Case Chat Overlay */}
-      {activeCase && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-4xl h-[700px] flex flex-col bg-transparent">
-             <Chat 
-                currentCase={activeCase} 
-                currentUser={currentUser!} 
-                otherPartyName={activeCase.lawyerId ? "Dr. Advogado" : "Sistema"} 
-                onClose={() => setActiveCaseId(null)}
-             />
-          </div>
-        </div>
-      )}
-    </DashboardLayout>
-  );
+            {selectedCase && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                    <div className="w-full max-w-4xl h-[600px] relative animate-in zoom-in duration-300">
+                        <Chat 
+                            currentCase={selectedCase}
+                            currentUser={currentUser!}
+                            otherPartyName="Cliente"
+                            onClose={() => setSelectedCase(null)}
+                        />
+                    </div>
+                </div>
+            )}
+        </DashboardLayout>
+    );
 };
 
-// --- LAWYER DASHBOARD ---
-export const LawyerDashboard = () => {
-  const { cases, currentUser, acceptCase, users, logout, buyJuris } = useApp();
-  const [activeView, setActiveView] = useState<ViewType>('dashboard');
-  const [activeTab, setActiveTab] = useState<'feed' | 'my'>('feed');
-  const [showBuyJuris, setShowBuyJuris] = useState(false);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
-  
-  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
-  const activeCase = cases.find(c => c.id === activeCaseId) || null;
+export const AdminDashboard: React.FC = () => {
+    const { users, verifyLawyer, currentUser } = useApp();
+    const [view, setView] = useState<ViewType>('dashboard');
 
-  // Filters
-  const [filterCity, setFilterCity] = useState('');
-  const [filterUF, setFilterUF] = useState('');
-
-  // Filtragems
-  const availableCases = cases.filter(c => {
-      const isStatusOpen = c.status === CaseStatus.OPEN;
-      const matchesCity = !filterCity || (c.city && c.city.toLowerCase().includes(filterCity.toLowerCase()));
-      const matchesUF = !filterUF || c.uf === filterUF;
-      return isStatusOpen && matchesCity && matchesUF;
-  });
-
-  const myCases = cases.filter(c => c.lawyerId === currentUser?.id);
-
-  if (!currentUser?.verified) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-slate-200">
-          <div className="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Award className="w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Verificação Pendente</h2>
-          <p className="text-slate-600 mb-6">
-            Sua conta está em análise. Nossa equipe está validando sua OAB ({currentUser?.oab}).
-            Você será notificado assim que aprovado.
-          </p>
-          <div className="animate-pulse w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-6">
-             <div className="w-1/2 h-full bg-yellow-400"></div>
-          </div>
-          
-          <button 
-            onClick={logout} 
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition flex items-center justify-center"
-          >
-            <LogOut className="w-4 h-4 mr-2" /> Sair / Voltar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const getClientName = (id: string) => users.find(u => u.id === id)?.name || "Cliente";
-
-  const BuyJurisModal = () => (
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-              <div className="bg-indigo-900 px-8 py-6 flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-white text-xl flex items-center"><Coins className="w-6 h-6 mr-2 text-yellow-400"/> Recarregar Juris</h3>
-                    <p className="text-indigo-200 text-sm">Adquira créditos para aceitar novas demandas</p>
-                  </div>
-                  <button onClick={() => setShowBuyJuris(false)} className="text-white/70 hover:text-white"><X className="w-6 h-6"/></button>
-              </div>
-              <div className="p-8 grid md:grid-cols-3 gap-6">
-                  {[
-                      { amount: 25, price: 49, color: 'bg-slate-100', btn: 'bg-slate-900', popular: false },
-                      { amount: 50, price: 79, color: 'bg-indigo-50 border-indigo-200', btn: 'bg-indigo-600', popular: true },
-                      { amount: 100, price: 109, color: 'bg-slate-100', btn: 'bg-slate-900', popular: false }
-                  ].map((pkg) => (
-                      <div key={pkg.amount} className={`relative rounded-2xl p-6 border ${pkg.popular ? 'border-2 border-indigo-500 shadow-xl' : 'border-slate-200'} flex flex-col items-center text-center transition hover:scale-105`}>
-                          {pkg.popular && <span className="absolute -top-3 bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Mais Popular</span>}
-                          <div className="mb-4">
-                              <Coins className={`w-12 h-12 ${pkg.popular ? 'text-indigo-600' : 'text-slate-700'}`} />
-                          </div>
-                          <div className="text-3xl font-extrabold text-slate-900 mb-1">{pkg.amount} Juris</div>
-                          <div className="text-slate-500 mb-6">Pacote Profissional</div>
-                          <div className="text-2xl font-bold text-slate-900 mb-6">R$ {pkg.price},00</div>
-                          <button 
-                            onClick={() => { buyJuris(pkg.amount); setShowBuyJuris(false); }}
-                            className={`w-full py-3 rounded-xl font-bold text-white transition ${pkg.btn} hover:opacity-90`}
-                          >
-                              Comprar Agora
-                          </button>
-                      </div>
-                  ))}
-              </div>
-          </div>
-      </div>
-  );
-
-  const renderDashboardContent = () => (
-    <>
-      {/* Header Stats with Balance */}
-      <div className="flex justify-between items-center mb-6">
-           <h2 className="text-2xl font-bold text-slate-900">Portal do Advogado</h2>
-           <button 
-             onClick={() => setShowBuyJuris(true)}
-             className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-full flex items-center shadow-lg transition transform hover:-translate-y-1"
-           >
-               <div className="bg-yellow-400 rounded-full p-1 mr-2"><Coins className="w-4 h-4 text-yellow-900"/></div>
-               <span className="font-bold mr-1">{currentUser?.balance || 0}</span> 
-               <span className="text-slate-400 text-sm font-normal ml-1">Juris</span>
-               <Plus className="w-4 h-4 ml-3 text-slate-400"/>
-           </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-           <div className="flex items-center justify-between">
-              <div>
-                <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-1">Ganhos Potenciais</div>
-                <div className="text-2xl font-bold text-slate-900">R$ 12.450</div>
-              </div>
-              <div className="bg-green-100 p-2 rounded-lg text-green-600"><DollarSign className="w-6 h-6"/></div>
-           </div>
-        </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-           <div className="flex items-center justify-between">
-              <div>
-                <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-1">Clientes Ativos</div>
-                <div className="text-2xl font-bold text-slate-900">{myCases.filter(c => c.status === CaseStatus.ACTIVE).length}</div>
-              </div>
-              <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Users className="w-6 h-6"/></div>
-           </div>
-        </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-           <div className="flex items-center justify-between">
-              <div>
-                <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-1">Oportunidades</div>
-                <div className="text-2xl font-bold text-slate-900">{availableCases.length}</div>
-              </div>
-              <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Search className="w-6 h-6"/></div>
-           </div>
-        </div>
-         <div className="bg-indigo-600 p-5 rounded-2xl shadow-lg shadow-indigo-600/20 text-white flex items-center justify-between">
-             <div>
-               <div className="text-indigo-200 text-xs font-bold uppercase tracking-wide mb-1">Status OAB</div>
-               <div className="text-lg font-bold flex items-center"><Check className="w-5 h-5 mr-1" /> Verificado</div>
-             </div>
-             <Award className="w-8 h-8 opacity-50"/>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-slate-200 p-1 rounded-xl inline-flex">
-        <button 
-          onClick={() => setActiveTab('feed')}
-          className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'feed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-        >
-          Oportunidades
-        </button>
-        <button 
-          onClick={() => setActiveTab('my')}
-          className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'my' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-        >
-          Meus Casos
-        </button>
-      </div>
-      
-      {/* Filter Bar (Only for Feed) */}
-      {activeTab === 'feed' && (
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center">
-              <div className="flex items-center text-slate-500 font-semibold mr-2">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filtrar Local:
-              </div>
-              <div className="flex-1 w-full relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                  <input 
-                    type="text" 
-                    placeholder="Filtrar por Cidade" 
-                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    value={filterCity}
-                    onChange={(e) => setFilterCity(e.target.value)}
-                  />
-              </div>
-              <div className="w-full md:w-32">
-                  <select 
-                    className="w-full py-2 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    value={filterUF}
-                    onChange={(e) => setFilterUF(e.target.value)}
-                  >
-                      <option value="">Todos UF</option>
-                      {BRAZIL_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                  </select>
-              </div>
-          </div>
-      )}
-
-      {/* Content */}
-      <div className="grid gap-6 animate-in slide-in-from-bottom-8 duration-700">
-        {activeTab === 'feed' ? (
-          availableCases.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-              <p className="text-slate-500">Nenhuma oportunidade disponível com esses filtros.</p>
-            </div>
-          ) : (
-            availableCases.map(c => (
-              <div key={c.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center hover:border-indigo-200 transition relative overflow-hidden group">
-                <div className="mb-4 md:mb-0 max-w-2xl relative z-10">
-                  <div className="flex items-center space-x-3 mb-2">
-                     <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider">{c.area}</span>
-                     {c.city && c.uf && (
-                        <span className="flex items-center text-slate-500 text-xs font-semibold">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {c.city} - {c.uf}
-                        </span>
-                     )}
-                     <span className="flex items-center text-green-600 text-xs font-semibold bg-green-50 px-2 py-1 rounded">
-                         <DollarSign className="w-3 h-3 mr-1"/> Cliente Pagante
-                     </span>
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">{c.title}</h3>
-                  <p className="text-slate-600 text-sm">{c.description}</p>
-                </div>
-                
-                <div className="flex flex-col items-end space-y-2 relative z-10">
-                    <button 
-                      onClick={() => acceptCase(c.id)}
-                      className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20 whitespace-nowrap w-full md:w-auto flex items-center"
-                    >
-                      <span>Aceitar Caso</span>
-                      <span className="ml-2 bg-indigo-800 text-indigo-100 text-xs py-0.5 px-2 rounded-full">-5 Juris</span>
-                    </button>
-                </div>
-              </div>
-            ))
-          )
-        ) : (
-          myCases.map(c => (
-            <div key={c.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer" onClick={() => setActiveCaseId(c.id)}>
-              <div className="flex justify-between items-center mb-4">
-                 <div className="flex items-center space-x-3">
-                   <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
-                      <UserIcon className="w-5 h-5" />
-                   </div>
-                   <div>
-                     <h3 className="font-bold text-slate-900">{getClientName(c.clientId)}</h3>
-                     <p className="text-xs text-slate-500">Caso #{c.id}</p>
-                   </div>
-                 </div>
-                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${c.status === CaseStatus.ACTIVE ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
-                   {c.status}
-                 </span>
-              </div>
-              <h4 className="font-semibold text-slate-800 mb-2">{c.title}</h4>
-              <p className="text-slate-600 text-sm mb-4 line-clamp-2">{c.description}</p>
-              
-              {c.city && c.uf && (
-                 <div className="flex items-center text-xs text-slate-400 mb-3">
-                    <MapPin className="w-3 h-3 mr-1" /> {c.city} - {c.uf}
-                 </div>
-              )}
-
-              <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                <span className="text-xs text-slate-400">Última atualização: hoje</span>
-                <button className="text-indigo-600 text-sm font-semibold hover:underline">Abrir Painel</button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {showBuyJuris && <BuyJurisModal />}
-    </>
-  );
-
-  return (
-    <DashboardLayout 
-        title="Portal do Advogado"
-        activeView={activeView}
-        onViewChange={setActiveView}
-    >
-      {activeView === 'dashboard' && renderDashboardContent()}
-      {activeView === 'profile' && <UserProfile />}
-      {activeView === 'notifications' && <NotificationList />}
-      {activeView === 'pro_strategy' && <StrategyAnalyzer isPremium={!!currentUser?.isPremium} onUnlock={() => setShowPremiumModal(true)} />}
-      {activeView === 'pro_calculator' && <LegalCalculator isPremium={!!currentUser?.isPremium} onUnlock={() => setShowPremiumModal(true)} />}
-
-       {/* Lawyer Chat Overlay */}
-       {activeCase && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-4xl h-[700px] flex flex-col bg-transparent">
-             <Chat 
-                currentCase={activeCase} 
-                currentUser={currentUser!} 
-                otherPartyName={getClientName(activeCase.clientId)} 
-                onClose={() => setActiveCaseId(null)}
-             />
-          </div>
-        </div>
-      )}
-
-    </DashboardLayout>
-  );
-};
-
-// --- ADMIN DASHBOARD ---
-export const AdminDashboard = () => {
-  const { users, verifyLawyer, cases, togglePremiumStatus } = useApp();
-  const [activeView, setActiveView] = useState<ViewType>('dashboard');
-  const [selectedLawyer, setSelectedLawyer] = useState<User | null>(null);
-
-  const lawyers = users.filter(u => u.role === UserRole.LAWYER);
-  const pendingLawyers = lawyers.filter(u => !u.verified);
-
-  const LawyerDetailsPanel = () => {
-    if (!selectedLawyer) return null;
+    const pendingLawyers = users.filter(u => u.role === UserRole.LAWYER && !u.verified);
 
     return (
-      <>
-        {/* Backdrop */}
-        <div 
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] transition-opacity" 
-          onClick={() => setSelectedLawyer(null)}
-        ></div>
-        
-        {/* Side Drawer */}
-        <div className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white shadow-2xl z-[70] transform transition-transform animate-in slide-in-from-right duration-300 flex flex-col">
-           {/* Header */}
-           <div className="bg-slate-900 text-white p-6 flex justify-between items-start">
-              <div className="flex items-center space-x-4">
-                  <img src={selectedLawyer.avatar} alt="Avatar" className="w-16 h-16 rounded-full border-4 border-slate-800" />
-                  <div>
-                      <h3 className="text-xl font-bold">{selectedLawyer.name}</h3>
-                      <p className="text-slate-400 text-sm">{selectedLawyer.email}</p>
-                  </div>
-              </div>
-              <button 
-                onClick={() => setSelectedLawyer(null)}
-                className="text-slate-400 hover:text-white transition"
-              >
-                  <X className="w-6 h-6" />
-              </button>
-           </div>
+        <DashboardLayout title="Administração" activeView={view} onViewChange={setView}>
+            {view === 'dashboard' && (
+                <div className="space-y-6 animate-in fade-in duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                             <p className="text-slate-500 text-xs font-bold uppercase mb-1">Total Usuários</p>
+                             <h3 className="text-3xl font-extrabold text-slate-900">{users.length}</h3>
+                        </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                             <p className="text-slate-500 text-xs font-bold uppercase mb-1">Advogados Pendentes</p>
+                             <h3 className="text-3xl font-extrabold text-orange-600">{pendingLawyers.length}</h3>
+                        </div>
+                    </div>
 
-           {/* Content */}
-           <div className="flex-1 overflow-y-auto p-6 space-y-8">
-               
-               {/* OAB Status Card */}
-               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start space-x-3">
-                   <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                   <div>
-                       <h4 className="font-bold text-yellow-800 text-sm">Verificação Necessária</h4>
-                       <p className="text-yellow-700 text-sm">Confira os dados abaixo junto ao Cadastro Nacional de Advogados (CNA) antes de aprovar.</p>
-                   </div>
-               </div>
-
-               {/* Details Grid */}
-               <div className="grid grid-cols-2 gap-4">
-                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                       <div className="flex items-center text-slate-500 mb-2">
-                           <Shield className="w-4 h-4 mr-2" />
-                           <span className="text-xs font-bold uppercase">Registro OAB</span>
-                       </div>
-                       <p className="text-lg font-mono font-bold text-slate-900">{selectedLawyer.oab || 'Não informado'}</p>
-                   </div>
-                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                       <div className="flex items-center text-slate-500 mb-2">
-                           <Calendar className="w-4 h-4 mr-2" />
-                           <span className="text-xs font-bold uppercase">Data de Registro</span>
-                       </div>
-                       <p className="text-lg font-bold text-slate-900">{new Date(selectedLawyer.createdAt).toLocaleDateString()}</p>
-                   </div>
-               </div>
-
-               {/* Contact Info */}
-               <div className="space-y-4">
-                   <h4 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-2">Informações de Contato</h4>
-                   <div className="space-y-3">
-                       <div className="flex items-center">
-                           <Mail className="w-5 h-5 text-slate-400 mr-3" />
-                           <span className="text-slate-700">{selectedLawyer.email}</span>
-                       </div>
-                       <div className="flex items-center">
-                           <Phone className="w-5 h-5 text-slate-400 mr-3" />
-                           <span className="text-slate-700">{selectedLawyer.phone || 'Não informado'}</span>
-                       </div>
-                   </div>
-               </div>
-
-               {/* Bio */}
-               <div className="space-y-4">
-                   <h4 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-2">Resumo Profissional</h4>
-                   <p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
-                       {selectedLawyer.bio || 'O usuário não forneceu uma biografia.'}
-                   </p>
-               </div>
-           </div>
-
-           {/* Footer Actions */}
-           <div className="p-6 border-t border-slate-100 bg-slate-50 flex space-x-4">
-               <button 
-                  onClick={() => {
-                      alert("Funcionalidade de rejeição simulada. O usuário será notificado.");
-                      setSelectedLawyer(null);
-                  }}
-                  className="flex-1 py-3 px-4 border border-slate-300 rounded-xl text-slate-700 font-bold hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition flex items-center justify-center"
-               >
-                   <XCircle className="w-5 h-5 mr-2" /> Recusar
-               </button>
-               <button 
-                  onClick={() => {
-                      verifyLawyer(selectedLawyer.id);
-                      setSelectedLawyer(null);
-                  }}
-                  className="flex-[2] py-3 px-4 bg-green-600 rounded-xl text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition flex items-center justify-center"
-               >
-                   <Check className="w-5 h-5 mr-2" /> Aprovar Cadastro
-               </button>
-           </div>
-        </div>
-      </>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-100">
+                            <h3 className="font-bold text-slate-900">Verificação de Advogados</h3>
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                            {pendingLawyers.length === 0 ? (
+                                <div className="p-8 text-center text-slate-500">Nenhum advogado pendente de verificação.</div>
+                            ) : (
+                                pendingLawyers.map(u => (
+                                    <div key={u.id} className="p-6 flex items-center justify-between">
+                                        <div className="flex items-center space-x-4">
+                                            <img src={u.avatar} className="w-12 h-12 rounded-full" alt="" />
+                                            <div>
+                                                <h4 className="font-bold text-slate-900">{u.name}</h4>
+                                                <p className="text-sm text-slate-500">OAB: {u.oab} • {u.email}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex space-x-2">
+                                            <button className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-bold">Rejeitar</button>
+                                            <button onClick={() => verifyLawyer(u.id)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-bold shadow-md">Aprovar</button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {view === 'profile' && <UserProfile />}
+            {view === 'notifications' && <NotificationList />}
+        </DashboardLayout>
     );
-  };
-
-  const renderDashboardContent = () => (
-    <>
-      {selectedLawyer && <LawyerDetailsPanel />}
-
-      {/* Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 animate-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-lg">
-           <div className="text-slate-400 mb-1 font-medium">Usuários Totais</div>
-           <div className="text-4xl font-bold">{users.length}</div>
-        </div>
-        <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-lg">
-           <div className="text-slate-400 mb-1 font-medium">Casos na Plataforma</div>
-           <div className="text-4xl font-bold">{cases.length}</div>
-        </div>
-        <div className="bg-indigo-600 text-white p-6 rounded-2xl shadow-lg">
-           <div className="text-indigo-200 mb-1 font-medium">Pendentes de Aprovação</div>
-           <div className="text-4xl font-bold">{pendingLawyers.length}</div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-8 duration-700 mb-8">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="font-bold text-slate-900 text-lg">Advogados Aguardando Validação</h3>
-          <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">{pendingLawyers.length} Pendentes</span>
-        </div>
-        {pendingLawyers.length === 0 ? (
-          <div className="p-10 text-center text-slate-500">Nenhum advogado pendente.</div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-             {pendingLawyers.map(lawyer => (
-               <div 
-                key={lawyer.id} 
-                onClick={() => setSelectedLawyer(lawyer)}
-                className="p-6 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer group"
-               >
-                 <div className="flex items-center space-x-4">
-                    <img src={lawyer.avatar} alt="" className="w-12 h-12 rounded-full" />
-                    <div>
-                      <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition">{lawyer.name}</h4>
-                      <p className="text-sm text-slate-500">{lawyer.email}</p>
-                      <div className="flex items-center mt-1 space-x-2">
-                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-mono">OAB: {lawyer.oab || 'N/A'}</span>
-                        <span className="text-xs text-slate-400">Registrado em: {new Date(lawyer.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                 </div>
-                 <div className="flex space-x-3">
-                   <button 
-                     className="text-slate-400 group-hover:text-indigo-600 transition"
-                   >
-                     <Eye className="w-5 h-5" />
-                   </button>
-                 </div>
-               </div>
-             ))}
-          </div>
-        )}
-      </div>
-
-      {/* Lawyer Management (Premium Toggle) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
-        <div className="px-6 py-5 border-b border-slate-100">
-          <h3 className="font-bold text-slate-900 text-lg">Gestão de Advogados (Premium)</h3>
-        </div>
-        <div className="divide-y divide-slate-100">
-             {lawyers.filter(l => l.verified).map(lawyer => (
-               <div key={lawyer.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition">
-                 <div className="flex items-center space-x-4">
-                    <img src={lawyer.avatar} alt="" className="w-10 h-10 rounded-full grayscale" />
-                    <div>
-                      <div className="flex items-center space-x-2">
-                          <h4 className="font-bold text-slate-900">{lawyer.name}</h4>
-                          {lawyer.isPremium && <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500"/>}
-                      </div>
-                      <p className="text-sm text-slate-500">{lawyer.email}</p>
-                    </div>
-                 </div>
-                 <div className="flex items-center space-x-4">
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${lawyer.isPremium ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}`}>
-                        {lawyer.isPremium ? 'PREMIUM' : 'STANDARD'}
-                    </span>
-                    <button 
-                         onClick={() => togglePremiumStatus(lawyer.id, !lawyer.isPremium)}
-                         className={`text-xs font-bold px-3 py-2 rounded-lg transition ${lawyer.isPremium ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
-                    >
-                        {lawyer.isPremium ? 'Revogar Premium' : 'Conceder Premium'}
-                    </button>
-                 </div>
-               </div>
-             ))}
-        </div>
-      </div>
-    </>
-  );
-
-  return (
-    <DashboardLayout 
-        title="Administração do Sistema"
-        activeView={activeView}
-        onViewChange={setActiveView}
-    >
-        {activeView === 'dashboard' && renderDashboardContent()}
-        {activeView === 'profile' && <UserProfile />}
-        {activeView === 'notifications' && <NotificationList />}
-    </DashboardLayout>
-  );
 };
