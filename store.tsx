@@ -1,186 +1,340 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Case, Message, UserRole, CaseStatus, Notification } from './types';
-
-// Mock Data
-const MOCK_USERS: User[] = [
-  { id: '1', name: 'Admin System', email: 'admin@socialjuris.com', role: UserRole.ADMIN, avatar: 'https://picsum.photos/id/1/200/200', createdAt: new Date().toISOString() },
-  { id: '2', name: 'Dr. Roberto Silva', email: 'roberto@law.com', role: UserRole.LAWYER, verified: true, oab: 'SP-123456', specialties: ['Civil', 'Trabalhista'], bio: 'Especialista em causas trabalhistas com 10 anos de experiência.', avatar: 'https://picsum.photos/id/1025/200/200', createdAt: new Date().toISOString() },
-  { id: '3', name: 'Maria Oliveira', email: 'maria@client.com', role: UserRole.CLIENT, phone: '(11) 99999-8888', avatar: 'https://picsum.photos/id/1027/200/200', createdAt: new Date().toISOString() },
-];
-
-const MOCK_CASES: Case[] = [
-  {
-    id: 'c1',
-    clientId: '3',
-    lawyerId: '2',
-    title: 'Ação de Cobrança Indevida',
-    description: 'Recebi uma cobrança de um serviço que já cancelei há 3 meses.',
-    area: 'Direito do Consumidor',
-    status: CaseStatus.ACTIVE,
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    messages: [
-      { id: 'm1', senderId: '3', content: 'Doutor, anexei os comprovantes.', timestamp: new Date(Date.now() - 86400000).toISOString(), type: 'text' },
-      { id: 'm2', senderId: '2', content: 'Perfeito, Maria. Vou analisar hoje ainda.', timestamp: new Date(Date.now() - 80000000).toISOString(), type: 'text' }
-    ]
-  }
-];
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  { id: 'n1', userId: '3', title: 'Boas-vindas', message: 'Bem-vindo ao SocialJuris! Complete seu perfil.', read: false, timestamp: new Date().toISOString(), type: 'info' },
-  { id: 'n2', userId: '2', title: 'Nova Oportunidade', message: 'Um novo caso em Direito do Consumidor está disponível.', read: false, timestamp: new Date().toISOString(), type: 'success' }
-];
+import { supabase } from './services/supabaseClient';
 
 interface AppContextType {
   currentUser: User | null;
   users: User[];
   cases: Case[];
   notifications: Notification[];
-  login: (email: string, role: UserRole) => void;
-  logout: () => void;
-  register: (user: Omit<User, 'id' | 'createdAt' | 'avatar'>) => void;
-  updateProfile: (data: Partial<User>) => void;
-  createCase: (data: { title: string; description: string; area: string }) => void;
-  acceptCase: (caseId: string) => void;
-  sendMessage: (caseId: string, content: string, type?: 'text' | 'image' | 'file') => void;
-  verifyLawyer: (userId: string) => void;
-  closeCase: (caseId: string, rating: number, comment: string) => void;
-  markNotificationAsRead: (id: string) => void;
+  login: (email: string, role: UserRole, password?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (user: Omit<User, 'id' | 'createdAt' | 'avatar'>, password?: string) => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  createCase: (data: { title: string; description: string; area: string }) => Promise<void>;
+  acceptCase: (caseId: string) => Promise<void>;
+  sendMessage: (caseId: string, content: string, type?: 'text' | 'image' | 'file') => Promise<void>;
+  verifyLawyer: (userId: string) => Promise<void>;
+  closeCase: (caseId: string, rating: number, comment: string) => Promise<void>;
+  markNotificationAsRead: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [cases, setCases] = useState<Case[]>(MOCK_CASES);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [session, setSession] = useState<any>(null);
 
-  const login = (email: string, role: UserRole) => {
-    const user = users.find(u => u.email === email && u.role === role);
-    if (user) {
-      setCurrentUser(user);
-    } else {
-      alert("Usuário não encontrado. Tente registrar-se ou verifique as credenciais.");
+  // 1. Monitorar estado de autenticação
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) fetchUserProfile(session.user.id);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setCases([]);
+        setNotifications([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 2. Buscar dados quando o usuário estiver logado
+  useEffect(() => {
+    if (currentUser) {
+      fetchUsers();
+      fetchCases();
+      fetchNotifications();
+
+      // Configurar Realtime para atualizações (básico)
+      const channel = supabase
+        .channel('public_updates')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'cases' }, () => fetchCases())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => fetchCases()) // Recarrega casos para pegar msgs novas
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchNotifications())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchUsers())
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [currentUser?.id]);
+
+  // --- FUNÇÕES DE BUSCA ---
+
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Erro ao buscar perfil:', error);
+    } else if (data) {
+      // Mapear campos snake_case do banco para camelCase do User
+      setCurrentUser({
+        ...data,
+        createdAt: data.created_at,
+        oab: data.oab || undefined,
+        verified: data.verified || false
+      });
     }
   };
 
-  const logout = () => setCurrentUser(null);
-
-  const register = (userData: Omit<User, 'id' | 'createdAt' | 'avatar'>) => {
-    const newUser: User = {
-      ...userData,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      avatar: `https://picsum.photos/seed/${Math.random()}/200/200`
-    };
-    setUsers([...users, newUser]);
-    setCurrentUser(newUser);
+  const fetchUsers = async () => {
+    const { data } = await supabase.from('profiles').select('*');
+    if (data) {
+      setUsers(data.map((u: any) => ({ ...u, createdAt: u.created_at })));
+    }
   };
 
-  const updateProfile = (data: Partial<User>) => {
+  const fetchCases = async () => {
+    const { data: casesData, error } = await supabase
+      .from('cases')
+      .select(`
+        *,
+        messages (*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (casesData) {
+      const formattedCases: Case[] = casesData.map((c: any) => ({
+        id: c.id,
+        clientId: c.client_id,
+        lawyerId: c.lawyer_id,
+        title: c.title,
+        description: c.description,
+        area: c.area,
+        status: c.status as CaseStatus,
+        createdAt: c.created_at,
+        feedback: c.feedback_rating ? { rating: c.feedback_rating, comment: c.feedback_comment } : undefined,
+        messages: (c.messages || []).map((m: any) => ({
+          id: m.id,
+          senderId: m.sender_id,
+          content: m.content,
+          type: m.type,
+          fileUrl: m.file_url,
+          timestamp: m.timestamp
+        })).sort((a: Message, b: Message) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      }));
+      setCases(formattedCases);
+    }
+  };
+
+  const fetchNotifications = async () => {
     if (!currentUser) return;
-    const updatedUser = { ...currentUser, ...data };
-    setCurrentUser(updatedUser);
-    setUsers(users.map(u => u.id === currentUser.id ? updatedUser : u));
-    alert("Perfil atualizado com sucesso!");
-  };
-
-  const createCase = (data: { title: string; description: string; area: string }) => {
-    if (!currentUser) return;
-    const newCase: Case = {
-      id: Math.random().toString(36).substr(2, 9),
-      clientId: currentUser.id,
-      ...data,
-      status: CaseStatus.OPEN,
-      createdAt: new Date().toISOString(),
-      messages: [{
-        id: Math.random().toString(36).substr(2, 9),
-        senderId: 'SYSTEM',
-        content: `Caso criado em ${new Date().toLocaleDateString()}. Aguardando advogado.`,
-        timestamp: new Date().toISOString(),
-        type: 'system'
-      }]
-    };
-    setCases([newCase, ...cases]);
-  };
-
-  const acceptCase = (caseId: string) => {
-    if (!currentUser || currentUser.role !== UserRole.LAWYER) return;
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('timestamp', { ascending: false });
     
-    // Find client to notify
-    const targetCase = cases.find(c => c.id === caseId);
-    if(targetCase) {
-        const notif: Notification = {
-            id: Math.random().toString(),
-            userId: targetCase.clientId,
-            title: 'Advogado Aceitou',
-            message: `O Dr(a). ${currentUser.name} aceitou seu caso: ${targetCase.title}.`,
-            read: false,
-            timestamp: new Date().toISOString(),
-            type: 'success'
-        };
-        setNotifications([notif, ...notifications]);
+    if (data) {
+      setNotifications(data);
+    }
+  };
+
+  // --- AÇÕES ---
+
+  const login = async (email: string, role: UserRole, password?: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: password || '123456', 
+    });
+
+    if (error) {
+      alert("Erro ao entrar: " + error.message);
+      throw error;
+    }
+    // O useEffect lida com a atualização do estado
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+  };
+
+  const register = async (userData: Omit<User, 'id' | 'createdAt' | 'avatar'>, password?: string) => {
+    if (!password) {
+        alert("Senha é obrigatória");
+        return;
     }
 
-    setCases(cases.map(c => {
-      if (c.id === caseId) {
-        return {
-          ...c,
-          lawyerId: currentUser.id,
-          status: CaseStatus.ACTIVE,
-          messages: [...c.messages, {
-            id: Math.random().toString(36),
-            senderId: 'SYSTEM',
-            content: `O advogado ${currentUser.name} aceitou o caso. Inicie a conversa!`,
-            timestamp: new Date().toISOString(),
-            type: 'system'
-          }]
-        };
+    // 1. Criar usuário no Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password: password,
+    });
+
+    if (authError) {
+      alert("Erro no cadastro: " + authError.message);
+      throw authError;
+    }
+
+    if (authData.user) {
+      // 2. Criar perfil na tabela profiles (Manual para garantir dados extras)
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: authData.user.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        oab: userData.role === 'LAWYER' ? userData.oab : null,
+        verified: userData.role === 'CLIENT', // Clientes já nascem verificados
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`,
+        created_at: new Date().toISOString()
+      });
+
+      if (profileError) {
+        console.error("Erro ao criar perfil:", profileError);
+        // Se falhar o perfil, seria bom limpar o auth, mas para demo ok
+        alert("Conta criada, mas houve um erro ao salvar o perfil. Tente logar.");
+      } else {
+        alert("Cadastro realizado com sucesso!");
+        // Auto login is handled by session listener
       }
-      return c;
-    }));
+    }
   };
 
-  const sendMessage = (caseId: string, content: string, type: 'text' | 'image' | 'file' = 'text') => {
+  const updateProfile = async (data: Partial<User>) => {
     if (!currentUser) return;
-    setCases(cases.map(c => {
-      if (c.id === caseId) {
-        return {
-          ...c,
-          messages: [...c.messages, {
-            id: Math.random().toString(36),
-            senderId: currentUser.id,
-            content,
-            type,
-            timestamp: new Date().toISOString(),
-            fileUrl: type !== 'text' ? 'https://picsum.photos/400/300' : undefined // Mock attachment
-          }]
-        };
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        name: data.name,
+        phone: data.phone,
+        bio: data.bio,
+        oab: data.oab
+      })
+      .eq('id', currentUser.id);
+
+    if (error) alert("Erro ao atualizar: " + error.message);
+    else {
+        alert("Perfil atualizado!");
+        fetchUserProfile(currentUser.id);
+    }
+  };
+
+  const createCase = async (data: { title: string; description: string; area: string }) => {
+    if (!currentUser) return;
+    
+    const { data: newCase, error } = await supabase
+      .from('cases')
+      .insert({
+        client_id: currentUser.id,
+        title: data.title,
+        description: data.description,
+        area: data.area,
+        status: 'OPEN'
+      })
+      .select()
+      .single();
+
+    if (!error && newCase) {
+      // Adicionar mensagem de sistema
+      await supabase.from('messages').insert({
+        case_id: newCase.id,
+        sender_id: currentUser.id, // Tecnicamente sistema, mas usamos ID válido para FK
+        content: `Caso criado em ${new Date().toLocaleDateString()}. Aguardando advogado.`,
+        type: 'system'
+      });
+      fetchCases();
+    }
+  };
+
+  const acceptCase = async (caseId: string) => {
+    if (!currentUser || currentUser.role !== UserRole.LAWYER) return;
+
+    const { error } = await supabase
+      .from('cases')
+      .update({
+        lawyer_id: currentUser.id,
+        status: 'ACTIVE'
+      })
+      .eq('id', caseId);
+
+    if (!error) {
+      // Notificar cliente
+      const targetCase = cases.find(c => c.id === caseId);
+      if (targetCase) {
+        await supabase.from('notifications').insert({
+            user_id: targetCase.clientId,
+            title: 'Advogado Aceitou',
+            message: `O Dr(a). ${currentUser.name} aceitou seu caso.`,
+            type: 'success'
+        });
+        
+        await supabase.from('messages').insert({
+            case_id: caseId,
+            sender_id: currentUser.id,
+            content: `O advogado ${currentUser.name} aceitou o caso.`,
+            type: 'system'
+        });
       }
-      return c;
-    }));
+      fetchCases();
+    }
   };
 
-  const verifyLawyer = (userId: string) => {
-    setUsers(users.map(u => u.id === userId ? { ...u, verified: true } : u));
-    const notif: Notification = {
-        id: Math.random().toString(),
-        userId: userId,
+  const sendMessage = async (caseId: string, content: string, type: 'text' | 'image' | 'file' = 'text') => {
+    if (!currentUser) return;
+
+    await supabase.from('messages').insert({
+        case_id: caseId,
+        sender_id: currentUser.id,
+        content,
+        type,
+        file_url: type !== 'text' ? 'https://picsum.photos/400/300' : null // Mock de upload real para simplificar
+    });
+    fetchCases();
+  };
+
+  const verifyLawyer = async (userId: string) => {
+    await supabase
+        .from('profiles')
+        .update({ verified: true })
+        .eq('id', userId);
+
+    await supabase.from('notifications').insert({
+        user_id: userId,
         title: 'Perfil Verificado',
-        message: 'Sua conta foi aprovada pela administração. Você já pode aceitar casos.',
-        read: false,
-        timestamp: new Date().toISOString(),
+        message: 'Sua conta foi aprovada pela administração.',
         type: 'success'
-    };
-    setNotifications([notif, ...notifications]);
+    });
+    fetchUsers();
   };
 
-  const closeCase = (caseId: string, rating: number, comment: string) => {
-    setCases(cases.map(c => c.id === caseId ? { ...c, status: CaseStatus.CLOSED, feedback: { rating, comment } } : c));
+  const closeCase = async (caseId: string, rating: number, comment: string) => {
+    await supabase
+        .from('cases')
+        .update({
+            status: 'CLOSED',
+            feedback_rating: rating,
+            feedback_comment: comment
+        })
+        .eq('id', caseId);
+    fetchCases();
   };
 
-  const markNotificationAsRead = (id: string) => {
-      setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  const markNotificationAsRead = async (id: string) => {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+      fetchNotifications();
   };
 
   return (

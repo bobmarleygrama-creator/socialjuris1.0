@@ -23,23 +23,28 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
     setPassword('');
   }, [role, type]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    
+    try {
       if (type === 'login') {
-        login(email, role);
+        // A store agora lida com a autenticação real do Supabase
+        await login(email, role, password);
       } else {
-        register({
+        await register({
           name,
           email,
           role,
           oab: role === UserRole.LAWYER ? oab : undefined,
           verified: role === UserRole.LAWYER ? false : true // Clients auto-verified
-        });
+        }, password);
       }
+    } catch (e) {
+      console.error(e);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const getRoleTitle = () => {
@@ -85,7 +90,14 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
                  <label className="text-sm font-medium text-slate-700 ml-1">Senha</label>
                  <div className="relative">
                    <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-                   <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition" placeholder="••••••••" />
+                   <input 
+                      required 
+                      type="password" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition" 
+                      placeholder="Sua senha secreta" 
+                    />
                  </div>
              </div>
 
@@ -106,7 +118,7 @@ const AuthScreen = ({ type, role, onBack }: { type: 'login' | 'register'; role: 
 
           {type === 'login' && role === UserRole.ADMIN && (
              <div className="mt-6 text-center text-xs text-slate-500 bg-slate-100 p-3 rounded-lg border border-slate-200">
-               <span className="font-bold">Dica de Acesso:</span> O sistema preencheu o email automaticamente. Use qualquer senha para entrar.
+               <span className="font-bold">Dica de Acesso Admin:</span> Certifique-se de ter criado um usuário com role 'ADMIN' no banco de dados do Supabase.
              </div>
           )}
        </div>
@@ -123,7 +135,7 @@ const MainApp = () => {
       case UserRole.CLIENT: return <ClientDashboard />;
       case UserRole.LAWYER: return <LawyerDashboard />;
       case UserRole.ADMIN: return <AdminDashboard />;
-      default: return <div>Erro: Papel desconhecido</div>;
+      default: return <div>Erro: Papel desconhecido ou não autorizado.</div>;
     }
   }
 
