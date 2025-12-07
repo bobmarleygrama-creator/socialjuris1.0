@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2 } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription, calculateCasePrice } from '../services/geminiService';
 
@@ -46,6 +46,7 @@ const UserProfile: React.FC = () => {
               <div className="flex items-center justify-center md:justify-start space-x-2 text-slate-500">
                   <span className="capitalize">{currentUser?.role === 'LAWYER' ? 'Advogado' : currentUser?.role === 'CLIENT' ? 'Cliente' : 'Administrador'}</span>
                   {currentUser?.verified && <Check className="w-4 h-4 text-green-500" />}
+                  {currentUser?.isPremium && <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-900 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 flex items-center"><Sparkles className="w-3 h-3 mr-1"/> PRO</span>}
               </div>
            </div>
         </div>
@@ -149,7 +150,7 @@ const NotificationList: React.FC = () => {
 
 // --- SHARED LAYOUT ---
 
-type ViewType = 'dashboard' | 'profile' | 'notifications';
+type ViewType = 'dashboard' | 'profile' | 'notifications' | 'premium_placeholder';
 
 const DashboardLayout: React.FC<{ 
     children: React.ReactNode; 
@@ -157,8 +158,89 @@ const DashboardLayout: React.FC<{
     activeView: ViewType;
     onViewChange: (view: ViewType) => void; 
 }> = ({ children, title, activeView, onViewChange }) => {
-  const { logout, currentUser, notifications } = useApp();
+  const { logout, currentUser, notifications, subscribePremium } = useApp();
   const unreadCount = notifications.filter(n => n.userId === currentUser?.id && !n.read).length;
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [processingPremium, setProcessingPremium] = useState(false);
+
+  const handlePremiumClick = () => {
+      if (currentUser?.isPremium) {
+          onViewChange('premium_placeholder');
+      } else {
+          setShowPremiumModal(true);
+      }
+  };
+
+  const handleSubscribe = async () => {
+      setProcessingPremium(true);
+      setTimeout(async () => {
+          await subscribePremium();
+          setProcessingPremium(false);
+          setShowPremiumModal(false);
+      }, 2000);
+  };
+
+  const PremiumModal = () => (
+      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in zoom-in duration-300 relative">
+              <button onClick={() => setShowPremiumModal(false)} className="absolute top-4 right-4 z-20 bg-black/10 hover:bg-black/20 rounded-full p-2 transition"><X className="w-5 h-5 text-slate-600"/></button>
+              
+              {/* Left Side: Visual */}
+              <div className="bg-slate-900 text-white p-10 md:w-2/5 flex flex-col justify-between relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600/30 to-purple-600/30 z-0"></div>
+                  <div className="relative z-10">
+                      <div className="inline-flex items-center space-x-2 bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-xs font-bold mb-6">
+                          <Sparkles className="w-3 h-3"/> <span>SocialJuris PRO</span>
+                      </div>
+                      <h3 className="text-4xl font-extrabold mb-4 leading-tight">Potencialize sua Advocacia</h3>
+                      <p className="text-slate-300">Desbloqueie ferramentas exclusivas de inteligência e gestão.</p>
+                  </div>
+                  <div className="relative z-10 space-y-4 mt-8">
+                      <div className="flex items-center space-x-3 text-sm">
+                          <Check className="w-5 h-5 text-green-400"/> <span>Gestão Avançada de Processos</span>
+                      </div>
+                      <div className="flex items-center space-x-3 text-sm">
+                          <Check className="w-5 h-5 text-green-400"/> <span>IA para Análise de Contratos</span>
+                      </div>
+                      <div className="flex items-center space-x-3 text-sm">
+                          <Check className="w-5 h-5 text-green-400"/> <span>Cálculos Jurídicos Automáticos</span>
+                      </div>
+                      <div className="flex items-center space-x-3 text-sm">
+                          <Check className="w-5 h-5 text-green-400"/> <span>Agenda Inteligente</span>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Right Side: Action */}
+              <div className="p-10 md:w-3/5 bg-white flex flex-col justify-center">
+                  <div className="text-center mb-8">
+                      <p className="text-slate-500 uppercase tracking-widest text-xs font-bold mb-2">Plano Profissional</p>
+                      <div className="flex items-baseline justify-center">
+                          <span className="text-5xl font-extrabold text-slate-900">R$ 49</span>
+                          <span className="text-2xl font-bold text-slate-900">,90</span>
+                          <span className="text-slate-400 ml-2">/mês</span>
+                      </div>
+                  </div>
+
+                  {processingPremium ? (
+                      <div className="text-center py-4">
+                          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-3"/>
+                          <p className="font-bold text-slate-900">Processando Pagamento...</p>
+                      </div>
+                  ) : (
+                      <button 
+                        onClick={handleSubscribe}
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-xl font-bold shadow-lg transform hover:-translate-y-1 transition-all flex items-center justify-center space-x-2"
+                      >
+                          <span>Assinar Agora</span>
+                          <CreditCard className="w-5 h-5 text-slate-400"/>
+                      </button>
+                  )}
+                  <p className="text-center text-xs text-slate-400 mt-4">Cancelamento grátis a qualquer momento.</p>
+              </div>
+          </div>
+      </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -170,11 +252,14 @@ const DashboardLayout: React.FC<{
             <span className="text-xl font-bold text-white tracking-tight">SocialJuris</span>
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto scrollbar-hide">
           <div className="flex items-center space-x-3 mb-8 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
             <img src={currentUser?.avatar} alt="User" className="w-10 h-10 rounded-full border-2 border-indigo-500 object-cover" />
             <div className="overflow-hidden">
-              <p className="font-medium text-sm truncate">{currentUser?.name}</p>
+              <div className="flex items-center">
+                  <p className="font-medium text-sm truncate mr-2">{currentUser?.name}</p>
+                  {currentUser?.isPremium && <Sparkles className="w-3 h-3 text-amber-400" />}
+              </div>
               <p className="text-xs text-slate-400 capitalize">{currentUser?.role === 'LAWYER' ? 'Advogado' : currentUser?.role === 'CLIENT' ? 'Cliente' : 'Admin'}</p>
             </div>
           </div>
@@ -204,6 +289,36 @@ const DashboardLayout: React.FC<{
               <UserIcon className="w-5 h-5" />
               <span>Meu Perfil</span>
             </button>
+
+            {/* LAWYER PRO SECTION */}
+            {currentUser?.role === UserRole.LAWYER && (
+                <div className="mt-8 pt-6 border-t border-slate-800">
+                    <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 px-2 flex justify-between items-center">
+                        <span>SocialJuris PRO</span>
+                        {!currentUser.isPremium && <Lock className="w-3 h-3"/>}
+                    </div>
+                    {[
+                        { name: 'Gestão de Clientes', icon: Users },
+                        { name: 'Controle Processual', icon: Scale },
+                        { name: 'Calculadora Jurídica', icon: Calculator },
+                        { name: 'Redator Inteligente (IA)', icon: FileText },
+                        { name: 'Agenda Legal', icon: Calendar },
+                        { name: 'Análise de Contratos (IA)', icon: Search }
+                    ].map((item, idx) => (
+                        <button
+                            key={idx}
+                            onClick={handlePremiumClick}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all group ${currentUser.isPremium ? 'text-slate-400 hover:text-amber-200 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-800/50 cursor-pointer'}`}
+                        >
+                            <div className="flex items-center space-x-3">
+                                <item.icon className={`w-4 h-4 ${currentUser.isPremium ? 'text-amber-500/80 group-hover:text-amber-400' : 'text-slate-600'}`} />
+                                <span className="text-sm">{item.name}</span>
+                            </div>
+                            {!currentUser.isPremium && <Lock className="w-3 h-3 text-slate-700" />}
+                        </button>
+                    ))}
+                </div>
+            )}
           </nav>
         </div>
         <div className="mt-auto p-6 border-t border-slate-800">
@@ -216,10 +331,12 @@ const DashboardLayout: React.FC<{
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {showPremiumModal && <PremiumModal />}
+        
         <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
           <div>
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight hidden md:block">
-                  {activeView === 'dashboard' ? title : activeView === 'profile' ? 'Meu Perfil' : 'Central de Notificações'}
+                  {activeView === 'dashboard' ? title : activeView === 'profile' ? 'Meu Perfil' : activeView === 'premium_placeholder' ? 'Ferramentas PRO' : 'Central de Notificações'}
               </h1>
               {activeView === 'dashboard' && <p className="text-sm text-slate-500 hidden md:block">Visão geral das suas atividades hoje</p>}
               <div className="md:hidden flex items-center space-x-2">
@@ -827,6 +944,29 @@ export const LawyerDashboard = () => {
     </>
   );
 
+  const renderPremiumPlaceholder = () => (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+          <div className="bg-amber-100 p-6 rounded-full mb-6 animate-bounce">
+              <Sparkles className="w-12 h-12 text-amber-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Área PRO Desbloqueada!</h2>
+          <p className="text-slate-500 max-w-md mx-auto mb-8">
+              Em breve, estas ferramentas estarão disponíveis aqui. Estamos finalizando os últimos ajustes da inteligência artificial para você.
+          </p>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-2xl w-full grid grid-cols-2 gap-4">
+               {[
+                  'Gestão de Clientes', 'Controle Processual', 'Calculadora Jurídica', 
+                  'Redator Inteligente (IA)', 'Agenda Legal', 'Análise de Contratos (IA)'
+               ].map(tool => (
+                   <div key={tool} className="flex items-center p-3 bg-slate-50 rounded-lg">
+                       <Check className="w-4 h-4 text-green-500 mr-2"/>
+                       <span className="text-slate-700 font-medium text-sm">{tool}</span>
+                   </div>
+               ))}
+          </div>
+      </div>
+  );
+
   return (
     <DashboardLayout 
         title="Portal do Advogado"
@@ -836,6 +976,7 @@ export const LawyerDashboard = () => {
       {activeView === 'dashboard' && renderDashboardContent()}
       {activeView === 'profile' && <UserProfile />}
       {activeView === 'notifications' && <NotificationList />}
+      {activeView === 'premium_placeholder' && renderPremiumPlaceholder()}
 
        {/* Lawyer Chat Overlay */}
        {activeCase && (
@@ -857,9 +998,10 @@ export const LawyerDashboard = () => {
 
 // --- ADMIN DASHBOARD ---
 export const AdminDashboard = () => {
-  const { users, verifyLawyer, cases } = useApp();
+  const { users, verifyLawyer, cases, togglePremiumStatus } = useApp();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
-  const pendingLawyers = users.filter(u => u.role === UserRole.LAWYER && !u.verified);
+  const lawyers = users.filter(u => u.role === UserRole.LAWYER);
+  const pendingLawyers = lawyers.filter(u => !u.verified);
 
   const renderDashboardContent = () => (
     <>
@@ -879,7 +1021,7 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-8 duration-700 mb-8">
         <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
           <h3 className="font-bold text-slate-900 text-lg">Advogados Aguardando Validação</h3>
           <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">{pendingLawyers.length} Pendentes</span>
@@ -902,7 +1044,6 @@ export const AdminDashboard = () => {
                     </div>
                  </div>
                  <div className="flex space-x-3">
-                   <button className="px-4 py-2 text-slate-500 hover:text-slate-800 font-medium text-sm transition">Rejeitar</button>
                    <button 
                      onClick={() => verifyLawyer(lawyer.id)}
                      className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-md shadow-green-600/20 transition flex items-center"
@@ -914,6 +1055,40 @@ export const AdminDashboard = () => {
              ))}
           </div>
         )}
+      </div>
+
+      {/* Lawyer Management (Premium Toggle) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
+        <div className="px-6 py-5 border-b border-slate-100">
+          <h3 className="font-bold text-slate-900 text-lg">Gestão de Advogados (Premium)</h3>
+        </div>
+        <div className="divide-y divide-slate-100">
+             {lawyers.filter(l => l.verified).map(lawyer => (
+               <div key={lawyer.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition">
+                 <div className="flex items-center space-x-4">
+                    <img src={lawyer.avatar} alt="" className="w-10 h-10 rounded-full grayscale" />
+                    <div>
+                      <div className="flex items-center space-x-2">
+                          <h4 className="font-bold text-slate-900">{lawyer.name}</h4>
+                          {lawyer.isPremium && <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500"/>}
+                      </div>
+                      <p className="text-sm text-slate-500">{lawyer.email}</p>
+                    </div>
+                 </div>
+                 <div className="flex items-center space-x-4">
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${lawyer.isPremium ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}`}>
+                        {lawyer.isPremium ? 'PREMIUM' : 'STANDARD'}
+                    </span>
+                    <button 
+                         onClick={() => togglePremiumStatus(lawyer.id, !lawyer.isPremium)}
+                         className={`text-xs font-bold px-3 py-2 rounded-lg transition ${lawyer.isPremium ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                    >
+                        {lawyer.isPremium ? 'Revogar Premium' : 'Conceder Premium'}
+                    </button>
+                 </div>
+               </div>
+             ))}
+        </div>
       </div>
     </>
   );

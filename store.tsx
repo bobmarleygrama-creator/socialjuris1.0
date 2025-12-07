@@ -18,6 +18,8 @@ interface AppContextType {
   closeCase: (caseId: string, rating: number, comment: string) => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
   buyJuris: (amount: number) => Promise<void>;
+  subscribePremium: () => Promise<void>;
+  togglePremiumStatus: (userId: string, status: boolean) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -95,6 +97,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createdAt: data.created_at,
         oab: data.oab || undefined,
         verified: data.verified || false,
+        isPremium: data.is_premium || false,
         balance: data.balance || 0
       });
     }
@@ -103,7 +106,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const fetchUsers = async () => {
     const { data } = await supabase.from('profiles').select('*');
     if (data) {
-      setUsers(data.map((u: any) => ({ ...u, createdAt: u.created_at })));
+      setUsers(data.map((u: any) => ({ 
+        ...u, 
+        createdAt: u.created_at,
+        isPremium: u.is_premium || false
+      })));
     }
   };
 
@@ -198,6 +205,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               name: 'Administrador',
               role: 'ADMIN',
               verified: true,
+              is_premium: true,
               avatar: `https://ui-avatars.com/api/?name=Admin&background=random`,
               created_at: new Date().toISOString()
            });
@@ -252,6 +260,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         oab: userData.role === 'LAWYER' ? userData.oab : null,
         verified: userData.role === 'CLIENT', // Clientes já nascem verificados
         balance: userData.role === 'LAWYER' ? 0 : null, // Saldo inicial 0 para advogados
+        is_premium: false,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`,
         created_at: new Date().toISOString()
       });
@@ -399,6 +408,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
   };
 
+  const subscribePremium = async () => {
+      if (!currentUser) return;
+      // Simulação de delay de pagamento
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_premium: true })
+        .eq('id', currentUser.id);
+
+      if (error) {
+          alert("Erro na assinatura: " + error.message);
+      } else {
+          setCurrentUser(prev => prev ? ({ ...prev, isPremium: true }) : null);
+          await supabase.from('notifications').insert({
+              user_id: currentUser.id,
+              title: 'Bem-vindo ao SocialJuris PRO',
+              message: 'Seu acesso às ferramentas premium foi liberado.',
+              type: 'success'
+          });
+      }
+  };
+
+  const togglePremiumStatus = async (userId: string, status: boolean) => {
+      await supabase
+        .from('profiles')
+        .update({ is_premium: status })
+        .eq('id', userId);
+      
+      fetchUsers();
+  };
+
   const sendMessage = async (caseId: string, content: string, type: 'text' | 'image' | 'file' = 'text') => {
     if (!currentUser) return;
 
@@ -469,7 +509,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <AppContext.Provider value={{ currentUser, users, cases, notifications, login, logout, register, updateProfile, createCase, acceptCase, sendMessage, verifyLawyer, closeCase, markNotificationAsRead, buyJuris }}>
+    <AppContext.Provider value={{ currentUser, users, cases, notifications, login, logout, register, updateProfile, createCase, acceptCase, sendMessage, verifyLawyer, closeCase, markNotificationAsRead, buyJuris, subscribePremium, togglePremiumStatus }}>
       {children}
     </AppContext.Provider>
   );

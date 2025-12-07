@@ -17,6 +17,7 @@ export interface User {
   role: UserRole;
   avatar: string;
   verified?: boolean; // For lawyers
+  isPremium?: boolean; // For Lawyer PRO access
   oab?: string; // For lawyers
   specialties?: string[]; // For lawyers
   phone?: string;
