@@ -17,13 +17,13 @@ export interface User {
   email: string;
   role: UserRole;
   avatar: string;
-  verified?: boolean; // For lawyers
-  isPremium?: boolean; // For Lawyer PRO access
-  oab?: string; // For lawyers
-  specialties?: string[]; // For lawyers
+  verified?: boolean;
+  isPremium?: boolean;
+  oab?: string;
+  specialties?: string[];
   phone?: string;
   bio?: string;
-  balance?: number; // Saldo de "Juris" para advogados
+  balance?: number;
   createdAt: string;
 }
 
@@ -48,12 +48,9 @@ export interface Case {
   uf?: string;
   createdAt: string;
   messages: Message[];
-  
-  // Monetização
-  price?: number; // Valor pago pelo cliente (2, 4 ou 6 reais)
+  price?: number;
   complexity?: 'Baixa' | 'Média' | 'Alta';
   isPaid?: boolean;
-
   feedback?: {
     rating: number;
     comment: string;
@@ -73,33 +70,48 @@ export interface Notification {
 export interface DashboardStats {
   activeCases: number;
   completedCases: number;
-  totalRevenue?: number; // Simulated for lawyers
-  pendingVerifications?: number; // For admin
+  totalRevenue?: number; 
+  pendingVerifications?: number; 
 }
 
 export interface StrategyAnalysis {
   weaknesses: string[];
   counterArguments: string[];
-  winProbability: string; // Ex: "75%"
-  winProbabilityValue: number; // Ex: 75 (para gráficos)
+  winProbability: string; 
+  winProbabilityValue: number;
   recommendedFocus: string;
-  jurisprudence: { title: string; summary: string }[]; // Novidade: Sugestão de leis/súmulas
+  jurisprudence: { title: string; summary: string }[];
+}
+
+// --- TIPOS AVANÇADOS PARA CALCULADORA FORENSE ---
+
+export type CalculatorType = 'CIVIL' | 'LABOR' | 'TAX' | 'FAMILY';
+
+export interface CalculationLineItem {
+  description: string; // Ex: "Principal Corrigido", "Juros Moratórios (1% a.m)"
+  value: number; // Valor final da linha
+  details?: string; // Ex: "R$ 10.000 x 1.05 (IGPM)"
+  isTotal?: boolean; // Se é uma linha de soma
+  isDeduction?: boolean; // Se é um desconto
 }
 
 export interface CalculationResult {
+  type: CalculatorType;
+  
+  // Resumo Financeiro
   originalValue: number;
   updatedValue: number;
-  totalInterest: number;
-  totalCorrection: number;
-  totalFine: number; // Multa
-  totalFees: number; // Honorários
-  indexUsed: string;
+  
+  // Metadados Processuais
+  indexUsed?: string;
   timeInMonths: number;
-  // Dados para o gráfico (evolução ano a ano)
+  
+  // Memória de Cálculo (Tabela Detalhada)
+  memoryGrid: CalculationLineItem[];
+
+  // Dados Específicos para Gráficos
   chartData: { 
-      label: string; // Ano/Mês
-      value: number; // Valor acumulado
-      interestPart: number; 
-      principalPart: number;
+      label: string; 
+      value: number; 
   }[];
 }
