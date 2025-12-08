@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../store';
 import { UserRole, CaseStatus, Case, User, Notification, StrategyAnalysis, CalculationResult, CalculatorType, CalculationLineItem } from '../types';
-import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock, Eye, XCircle, Hammer, LayoutGrid, PieChart, ChevronRight, Copy, Printer, BookOpen, Download, RefreshCw, ChevronDown, GraduationCap, Heart, Landmark, BriefcaseBusiness, FileSpreadsheet, Home, Gavel, ShoppingBag } from 'lucide-react';
+import { Plus, Briefcase, MessageSquare, Check, X, Bell, User as UserIcon, LogOut, Award, DollarSign, Users, Activity, Filter, Search, Save, Settings, Phone, Mail, Shield, AlertCircle, MapPin, CreditCard, Coins, Loader2, Lock, FileText, Calculator, Calendar, Scale, Sparkles, BrainCircuit, TrendingUp, BarChart3, AlertTriangle, Zap, FileSearch, Folders, Clock, Eye, XCircle, Hammer, LayoutGrid, PieChart, ChevronRight, Copy, Printer, BookOpen, Download, RefreshCw, ChevronDown, GraduationCap, Heart, Landmark, BriefcaseBusiness, FileSpreadsheet, Home, Gavel, ShoppingBag, Globe } from 'lucide-react';
 import { Chat } from './Chat';
 import { analyzeCaseDescription, calculateCasePrice, analyzeOpposingStrategy, calculateLegalAdjustment } from '../services/geminiService';
 
@@ -367,17 +367,17 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
     const [includeThirteenth, setIncludeThirteenth] = useState(true);
     const [extraExpenses, setExtraExpenses] = useState(0);
 
-    // STATE - CRIMINAL (NEW)
+    // STATE - CRIMINAL
     const [sentenceYears, setSentenceYears] = useState(5);
     const [sentenceMonths, setSentenceMonths] = useState(4);
     const [crimeType, setCrimeType] = useState('NON_VIOLENT');
     const [isRecidivist, setIsRecidivist] = useState(false);
 
-    // STATE - RENT (NEW)
+    // STATE - RENT
     const [currentRent, setCurrentRent] = useState(2500);
     const [monthsAccumulated, setMonthsAccumulated] = useState(12);
 
-    // STATE - CONSUMER (NEW)
+    // STATE - CONSUMER
     const [chargedValue, setChargedValue] = useState(150);
     const [isBadFaith, setIsBadFaith] = useState(true);
 
@@ -400,10 +400,10 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
             // Criminal
             sentenceYears, sentenceMonths, crimeType, isRecidivist,
             // Rent
-            currentRent, indexType: index, monthsAccumulated, // Recicla 'index' para tipo do aluguel
+            currentRent, indexType: index, monthsAccumulated, 
             // Consumer
             chargedValue, isBadFaith,
-            // Shared (Tax & Consumer)
+            // Shared
             paymentDate
         };
         
@@ -767,8 +767,8 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
                                                 <td className="py-3 text-right text-xs text-slate-500">{item.details || '-'}</td>
                                                 <td className="py-3 text-right">
                                                     {item.unit === '%' ? `${item.value.toFixed(2)}%` : 
-                                                     item.unit === 'Dias' || item.unit === 'Dias Totais' ? item.value : 
-                                                     item.unit === 'Tempo' ? '' :
+                                                     item.unit === 'Dias' || item.unit === 'Dias Totais' || item.unit === 'Anos' ? item.value : 
+                                                     item.unit === 'Tempo' || item.unit === 'Status' ? '' :
                                                      item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
                                             </tr>
@@ -807,726 +807,585 @@ const LegalCalculator: React.FC<{ isPremium: boolean, onUnlock: () => void }> = 
     );
 };
 
+// --- DASHBOARD COMPONENTS ---
+
 export const ClientDashboard: React.FC = () => {
-  const { currentUser, cases, createCase, logout, notifications } = useApp();
-  const [view, setView] = useState<ViewType>('dashboard');
-  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const { currentUser, cases, logout, createCase } = useApp();
+  const [view, setView] = useState<ViewType>('my-cases');
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   
   // New Case State
   const [description, setDescription] = useState('');
-  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-  const [loadingAi, setLoadingAi] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<any>(null);
   const [city, setCity] = useState('');
   const [uf, setUf] = useState('');
 
   const myCases = cases.filter(c => c.clientId === currentUser?.id);
-  const unreadCount = notifications.filter(n => n.userId === currentUser?.id && !n.read).length;
+  const selectedCase = cases.find(c => c.id === selectedCaseId);
 
   const handleAnalyze = async () => {
-    if(!description) return;
-    setLoadingAi(true);
-    const analysis = await analyzeCaseDescription(description);
-    setAiAnalysis(analysis);
-    setLoadingAi(false);
+     if(!description) return;
+     setIsAnalyzing(true);
+     const result = await analyzeCaseDescription(description);
+     setAnalysis(result);
+     setIsAnalyzing(false);
   };
 
   const handlePublish = async () => {
-     if(!aiAnalysis || !city || !uf) {
-         alert("Preencha todos os campos e aguarde a análise da IA.");
-         return;
-     }
-     const price = calculateCasePrice(aiAnalysis.complexity);
-     await createCase({
-         title: aiAnalysis.title,
-         description: description, // Original description
-         area: aiAnalysis.area,
-         city,
-         uf,
-         price,
-         complexity: aiAnalysis.complexity
-     });
-     setAiAnalysis(null);
-     setDescription('');
-     setCity('');
-     setUf('');
-     setView('dashboard');
+      if(!analysis) return;
+      await createCase({
+          title: analysis.title,
+          description: description,
+          area: analysis.area,
+          complexity: analysis.complexity,
+          price: calculateCasePrice(analysis.complexity),
+          city: city || 'Não informado',
+          uf: uf || 'UF'
+      });
+      setAnalysis(null);
+      setDescription('');
+      setView('my-cases');
   };
 
-  if (selectedCase) {
-    return (
-        <div className="fixed inset-0 z-50 bg-slate-900/90 flex items-center justify-center p-4">
-            <div className="max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl relative">
-                <Chat 
-                   currentCase={selectedCase} 
-                   currentUser={currentUser!} 
-                   otherPartyName="Advogado"
-                   onClose={() => setSelectedCase(null)}
-                />
-            </div>
-        </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-slate-400 flex flex-col fixed h-full z-20">
-        <div className="p-6 border-b border-slate-800">
-           <div className="flex items-center space-x-2 text-white font-bold text-xl">
-              <Scale className="w-6 h-6 text-indigo-500" />
-              <span>SocialJuris</span>
-           </div>
-        </div>
-        <nav className="flex-1 p-4 space-y-1">
-           <button onClick={() => setView('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition ${view === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
-              <Folders className="w-5 h-5"/> <span>Meus Casos</span>
-           </button>
-           <button onClick={() => setView('new-case')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition ${view === 'new-case' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
-              <Plus className="w-5 h-5"/> <span>Novo Caso</span>
-           </button>
-           <button onClick={() => setView('profile')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition ${view === 'profile' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
-              <UserIcon className="w-5 h-5"/> <span>Meu Perfil</span>
-           </button>
-           <button onClick={() => setView('notifications')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition ${view === 'notifications' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
-              <div className="relative">
-                 <Bell className="w-5 h-5"/>
-                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900"></span>}
-              </div> 
-              <span>Notificações</span>
-           </button>
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-           <button onClick={logout} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-950/30 hover:text-red-300 transition">
-              <LogOut className="w-5 h-5"/> <span>Sair</span>
-           </button>
-        </div>
-      </aside>
-
-      {/* Content */}
-      <main className="flex-1 ml-64 p-8">
-         <header className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">
-                {view === 'dashboard' && 'Meus Casos'}
-                {view === 'new-case' && 'Publicar Nova Demanda'}
-                {view === 'profile' && 'Minha Conta'}
-                {view === 'notifications' && 'Central de Notificações'}
-            </h1>
-            <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-slate-500">Olá, {currentUser?.name}</span>
-                <img src={currentUser?.avatar} alt="User" className="w-10 h-10 rounded-full border border-slate-200 shadow-sm" />
-            </div>
-         </header>
-
-         {/* VIEWS */}
-         {view === 'dashboard' && (
-            <div className="grid grid-cols-1 gap-6">
-                {myCases.length === 0 ? (
-                    <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Folders className="w-10 h-10 text-slate-300"/>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">Nenhum caso encontrado</h3>
-                        <p className="text-slate-500 mb-6">Você ainda não publicou nenhuma demanda jurídica.</p>
-                        <button onClick={() => setView('new-case')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition">Criar Primeiro Caso</button>
-                    </div>
-                ) : (
-                    myCases.map(c => (
-                        <div key={c.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition flex justify-between items-center group">
-                            <div>
-                                <div className="flex items-center space-x-3 mb-2">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${c.status === 'OPEN' ? 'bg-green-100 text-green-700' : c.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
-                                        {c.status === 'OPEN' ? 'Aguardando Advogado' : c.status === 'ACTIVE' ? 'Em Andamento' : 'Finalizado'}
-                                    </span>
-                                    <span className="text-xs text-slate-400">{new Date(c.createdAt).toLocaleDateString()}</span>
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900">{c.title}</h3>
-                                <p className="text-slate-500 text-sm mt-1 line-clamp-1">{c.description}</p>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                                {c.lawyerId && (
-                                    <button onClick={() => setSelectedCase(c)} className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 transition">
-                                        <MessageSquare className="w-4 h-4 mr-2"/> Chat
-                                    </button>
-                                )}
-                                <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-slate-100 transition">
-                                    <ChevronRight className="w-5 h-5"/>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-         )}
-
-         {view === 'new-case' && (
-             <div className="max-w-3xl mx-auto">
-                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                     <div className="p-8">
-                         <label className="block text-lg font-bold text-slate-900 mb-4">Descreva seu problema</label>
-                         <textarea 
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Ex: Comprei um produto pela internet que nunca chegou e a loja não responde..."
-                            className="w-full h-40 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-slate-700 text-lg leading-relaxed mb-6"
-                         />
-                         
-                         <button 
-                            onClick={handleAnalyze}
-                            disabled={loadingAi || !description}
-                            className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center disabled:opacity-50"
-                         >
-                            {loadingAi ? <Loader2 className="w-5 h-5 animate-spin mr-2"/> : <Sparkles className="w-5 h-5 mr-2 text-indigo-400"/>}
-                            {loadingAi ? 'Analisando com IA...' : 'Analisar Caso e Ver Custo'}
-                         </button>
-                     </div>
-
-                     {aiAnalysis && (
-                         <div className="bg-indigo-50/50 p-8 border-t border-indigo-100 animate-in slide-in-from-bottom-4 duration-500">
-                             <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center"><Check className="w-6 h-6 text-green-500 mr-2"/> Análise Concluída</h3>
-                             
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                                 <div className="bg-white p-4 rounded-xl border border-indigo-100">
-                                     <p className="text-xs text-slate-500 font-bold uppercase mb-1">Área Sugerida</p>
-                                     <p className="font-bold text-indigo-700">{aiAnalysis.area}</p>
-                                 </div>
-                                 <div className="bg-white p-4 rounded-xl border border-indigo-100">
-                                     <p className="text-xs text-slate-500 font-bold uppercase mb-1">Complexidade</p>
-                                     <p className="font-bold text-indigo-700">{aiAnalysis.complexity}</p>
-                                 </div>
-                                 <div className="col-span-2 bg-white p-4 rounded-xl border border-indigo-100">
-                                     <p className="text-xs text-slate-500 font-bold uppercase mb-1">Título Profissional</p>
-                                     <p className="font-bold text-slate-900">{aiAnalysis.title}</p>
-                                 </div>
-                             </div>
-
-                             <div className="grid grid-cols-2 gap-4 mb-8">
-                                 <div>
-                                     <label className="block text-sm font-bold text-slate-700 mb-2">Cidade</label>
-                                     <input type="text" value={city} onChange={e => setCity(e.target.value)} className="w-full p-3 border border-slate-300 rounded-lg" placeholder="Sua cidade" />
-                                 </div>
-                                 <div>
-                                     <label className="block text-sm font-bold text-slate-700 mb-2">Estado</label>
-                                     <select value={uf} onChange={e => setUf(e.target.value)} className="w-full p-3 border border-slate-300 rounded-lg">
-                                         <option value="">UF</option>
-                                         {BRAZIL_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                     </select>
-                                 </div>
-                             </div>
-
-                             <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
-                                 <div>
-                                     <p className="text-slate-500 font-medium">Taxa de Publicação</p>
-                                     <p className="text-xs text-slate-400">Pagamento único</p>
-                                 </div>
-                                 <div className="text-2xl font-bold text-slate-900">R$ {calculateCasePrice(aiAnalysis.complexity).toFixed(2)}</div>
-                             </div>
-
-                             <button 
-                                onClick={handlePublish}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-green-600/30 transition flex items-center justify-center transform hover:-translate-y-1"
-                             >
-                                Pagar e Publicar Agora
-                             </button>
-                         </div>
-                     )}
-                 </div>
-             </div>
-         )}
-
-         {view === 'profile' && <UserProfile />}
-         {view === 'notifications' && <NotificationList />}
-
-      </main>
-    </div>
-  );
-};
-
-export const LawyerDashboard: React.FC = () => {
-  const { currentUser, cases, acceptCase, buyJuris, subscribePremium, logout, notifications } = useApp();
-  const [view, setView] = useState<ViewType>('dashboard');
-  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
-
-  // Filter cases
-  const openCases = cases.filter(c => c.status === CaseStatus.OPEN);
-  const myActiveCases = cases.filter(c => c.lawyerId === currentUser?.id);
-  const unreadCount = notifications.filter(n => n.userId === currentUser?.id && !n.read).length;
-
-  // Render Logic
-  if (selectedCase) {
-      return (
-          <div className="fixed inset-0 z-50 bg-slate-900/90 flex items-center justify-center p-4">
-              <div className="max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl relative">
-                  <Chat 
-                     currentCase={selectedCase} 
-                     currentUser={currentUser!} 
-                     otherPartyName="Cliente"
-                     onClose={() => setSelectedCase(null)}
-                  />
-              </div>
-          </div>
-      );
-  }
-
-  const SidebarItem = ({ id, icon: Icon, label, badge }: any) => (
+  const MenuItem = ({ id, icon: Icon, label }: any) => (
       <button 
-        onClick={() => setView(id)}
-        className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition mb-1 ${view === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}
+        onClick={() => { setView(id); setSelectedCaseId(null); }}
+        className={`w-full flex items-center space-x-3 px-6 py-4 transition border-l-4 ${view === id ? 'bg-indigo-50 border-indigo-600 text-indigo-900' : 'border-transparent text-slate-500 hover:text-indigo-600 hover:bg-slate-50'}`}
       >
-         <Icon className="w-5 h-5"/>
-         <span className="flex-1 text-left">{label}</span>
-         {badge > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{badge}</span>}
+          <Icon className="w-5 h-5" />
+          <span className="font-semibold">{label}</span>
       </button>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
-       <aside className="w-72 bg-slate-900 flex flex-col fixed h-full z-20 overflow-y-auto">
-          <div className="p-6 border-b border-slate-800">
-             <div className="flex items-center space-x-2 text-white font-bold text-xl">
-                <Scale className="w-6 h-6 text-indigo-500" />
-                <span>SocialJuris</span> <span className="text-xs bg-indigo-900 text-indigo-300 px-1.5 py-0.5 rounded ml-2">ADV</span>
-             </div>
-             <div className="mt-6 bg-slate-800 rounded-xl p-4 flex items-center justify-between">
-                 <div>
-                     <p className="text-xs text-slate-400 font-bold uppercase">Seu Saldo</p>
-                     <p className="text-white font-bold text-lg">{currentUser?.balance || 0} Juris</p>
-                 </div>
-                 <button onClick={() => setView('premium_sales')} className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg transition"><Plus className="w-4 h-4"/></button>
-             </div>
-          </div>
-          
-          <nav className="flex-1 p-4">
-              <p className="text-xs font-bold text-slate-600 uppercase mb-3 px-4">Principal</p>
-              <SidebarItem id="dashboard" icon={LayoutGrid} label="Visão Geral" />
-              <SidebarItem id="market" icon={Search} label="Buscar Casos" badge={openCases.length} />
-              <SidebarItem id="my-cases" icon={Briefcase} label="Meus Processos" badge={myActiveCases.length} />
-              
-              <p className="text-xs font-bold text-slate-600 uppercase mt-8 mb-3 px-4">Ferramentas PRO</p>
-              <SidebarItem id="pro_analytics" icon={BarChart3} label="Analytics Jurídico" />
-              <SidebarItem id="pro_strategy" icon={BrainCircuit} label="Opositor IA" />
-              <SidebarItem id="pro_calculator" icon={Calculator} label="Calculadora Forense" />
-              <SidebarItem id="pro_writer" icon={FileText} label="Redator Automático" />
-              <SidebarItem id="pro_docs" icon={Files} label="Gestão de Docs" />
-              
-              <p className="text-xs font-bold text-slate-600 uppercase mt-8 mb-3 px-4">Conta</p>
-              <SidebarItem id="notifications" icon={Bell} label="Notificações" badge={unreadCount} />
-              <SidebarItem id="profile" icon={UserIcon} label="Meu Perfil" />
-          </nav>
-
-          <div className="p-4 border-t border-slate-800">
-              <button onClick={logout} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-950/30 hover:text-red-300 transition">
-                 <LogOut className="w-5 h-5"/> <span>Sair</span>
-              </button>
-           </div>
-       </aside>
-
-       <main className="flex-1 ml-72 p-8">
-           <header className="flex justify-between items-center mb-8">
-              <h1 className="text-2xl font-bold text-slate-900">
-                  {view === 'dashboard' && 'Dashboard'}
-                  {view === 'market' && 'Oportunidades em Aberto'}
-                  {view === 'my-cases' && 'Meus Processos Ativos'}
-                  {view === 'pro_strategy' && 'Análise Estratégica (IA)'}
-                  {view === 'pro_calculator' && 'Calculadora Forense (Multi-Área)'}
-              </h1>
-              <div className="flex items-center space-x-4">
-                 {!currentUser?.isPremium && (
-                     <button onClick={() => setView('premium_sales')} className="bg-gradient-to-r from-amber-300 to-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-orange-500/20 hover:-translate-y-0.5 transition flex items-center">
-                         <Sparkles className="w-4 h-4 mr-2"/> Assinar PRO
-                     </button>
-                 )}
-                  <div className="text-right hidden md:block">
-                      <p className="text-sm font-bold text-slate-900">{currentUser?.name}</p>
-                      <p className="text-xs text-slate-500">OAB: {currentUser?.oab || 'N/A'}</p>
-                  </div>
-                  <img src={currentUser?.avatar} alt="User" className="w-10 h-10 rounded-full border border-slate-200 shadow-sm" />
+      <div className="min-h-screen bg-slate-50 flex font-sans">
+          {/* Sidebar */}
+          <aside className="w-64 bg-white border-r border-slate-200 fixed h-full z-20 hidden md:block">
+              <div className="h-20 flex items-center px-8 border-b border-slate-100">
+                  <Scale className="w-8 h-8 text-indigo-600 mr-2" />
+                  <span className="font-bold text-slate-900 text-xl">SocialJuris</span>
               </div>
-           </header>
+              <nav className="mt-6">
+                  <MenuItem id="my-cases" icon={Folders} label="Meus Casos" />
+                  <MenuItem id="new-case" icon={Plus} label="Novo Caso" />
+                  <MenuItem id="notifications" icon={Bell} label="Notificações" />
+                  <MenuItem id="profile" icon={UserIcon} label="Meu Perfil" />
+              </nav>
+              <div className="absolute bottom-0 w-full p-6 border-t border-slate-100">
+                  <button onClick={logout} className="flex items-center space-x-2 text-slate-500 hover:text-red-600 transition font-medium">
+                      <LogOut className="w-5 h-5" />
+                      <span>Sair</span>
+                  </button>
+              </div>
+          </aside>
 
-           {/* DASHBOARD HOME */}
-           {view === 'dashboard' && (
-               <div className="space-y-6 animate-in fade-in duration-500">
-                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                           <div className="flex items-center justify-between mb-4">
-                               <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600"><Briefcase className="w-6 h-6"/></div>
-                               <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">+12%</span>
-                           </div>
-                           <p className="text-slate-500 text-sm font-medium">Processos Ativos</p>
-                           <h3 className="text-3xl font-bold text-slate-900">{myActiveCases.length}</h3>
-                       </div>
-                       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                           <div className="flex items-center justify-between mb-4">
-                               <div className="p-3 bg-green-50 rounded-xl text-green-600"><DollarSign className="w-6 h-6"/></div>
-                               <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">+5%</span>
-                           </div>
-                           <p className="text-slate-500 text-sm font-medium">Honorários Previstos</p>
-                           <h3 className="text-3xl font-bold text-slate-900">R$ {((currentUser?.balance || 0) * 150).toLocaleString()}</h3>
-                       </div>
-                       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 bg-orange-50 rounded-xl text-orange-600"><Star className="w-6 h-6"/></div>
-                                <span className="text-xs font-bold text-slate-400">Média</span>
-                            </div>
-                            <p className="text-slate-500 text-sm font-medium">Avaliação</p>
-                            <h3 className="text-3xl font-bold text-slate-900">4.9</h3>
-                        </div>
-                        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-2xl shadow-lg text-white">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 bg-white/20 rounded-xl"><Sparkles className="w-6 h-6"/></div>
-                            </div>
-                            <p className="text-indigo-200 text-sm font-medium">Status da Conta</p>
-                            <h3 className="text-2xl font-bold">{currentUser?.isPremium ? 'PRO Member' : 'Plano Grátis'}</h3>
-                            {!currentUser?.isPremium && <button onClick={() => setView('premium_sales')} className="text-xs bg-white text-indigo-700 font-bold px-3 py-1.5 rounded-lg mt-3 hover:bg-indigo-50 transition">Fazer Upgrade</button>}
-                        </div>
+          {/* Main Content */}
+          <main className="flex-1 md:ml-64 p-8">
+              {/* Mobile Header */}
+              <div className="md:hidden flex justify-between items-center mb-8">
+                  <Scale className="w-8 h-8 text-indigo-600" />
+                  <button onClick={logout}><LogOut className="w-6 h-6 text-slate-500" /></button>
+              </div>
+
+              {view === 'my-cases' && (
+                  !selectedCase ? (
+                      <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
+                          <div className="flex justify-between items-center mb-8">
+                              <h1 className="text-2xl font-bold text-slate-900">Meus Casos</h1>
+                              <button onClick={() => setView('new-case')} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center shadow-lg hover:-translate-y-0.5">
+                                  <Plus className="w-5 h-5 mr-2" /> Novo Caso
+                              </button>
+                          </div>
+                          <div className="grid gap-6">
+                              {myCases.length === 0 ? (
+                                  <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
+                                      <Folders className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                                      <h3 className="text-lg font-bold text-slate-900">Nenhum caso encontrado</h3>
+                                      <p className="text-slate-500 mb-6">Você ainda não publicou nenhuma demanda jurídica.</p>
+                                      <button onClick={() => setView('new-case')} className="text-indigo-600 font-bold hover:underline">Começar agora</button>
+                                  </div>
+                              ) : (
+                                  myCases.map(c => (
+                                      <div key={c.id} onClick={() => setSelectedCaseId(c.id)} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer group">
+                                          <div className="flex justify-between items-start">
+                                              <div>
+                                                  <div className="flex items-center space-x-2 mb-2">
+                                                      <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${c.status === 'OPEN' ? 'bg-green-100 text-green-700' : c.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                          {c.status === 'OPEN' ? 'Aberto' : c.status === 'ACTIVE' ? 'Em Andamento' : 'Encerrado'}
+                                                      </span>
+                                                      <span className="text-slate-400 text-xs">• {new Date(c.createdAt).toLocaleDateString()}</span>
+                                                  </div>
+                                                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition">{c.title}</h3>
+                                                  <p className="text-slate-500 text-sm mt-1 line-clamp-2">{c.description}</p>
+                                              </div>
+                                              <ChevronRight className="text-slate-300 group-hover:text-indigo-600 transition" />
+                                          </div>
+                                      </div>
+                                  ))
+                              )}
+                          </div>
+                      </div>
+                  ) : (
+                      <div className="h-[calc(100vh-4rem)] flex flex-col animate-in slide-in-from-right-4 duration-300">
+                          <button onClick={() => setSelectedCaseId(null)} className="mb-4 flex items-center text-slate-500 hover:text-slate-900 font-bold w-fit">
+                              <ChevronRight className="w-5 h-5 rotate-180 mr-1" /> Voltar
+                          </button>
+                          <div className="flex-1 flex gap-6 overflow-hidden">
+                              <div className="w-1/3 bg-white p-6 rounded-2xl border border-slate-200 overflow-y-auto hidden lg:block">
+                                  <h2 className="font-bold text-xl mb-4 text-slate-900">{selectedCase.title}</h2>
+                                  <div className="space-y-4 text-sm">
+                                      <div><span className="text-slate-500 block text-xs uppercase font-bold">Área</span> {selectedCase.area}</div>
+                                      <div><span className="text-slate-500 block text-xs uppercase font-bold">Complexidade</span> {selectedCase.complexity}</div>
+                                      <div><span className="text-slate-500 block text-xs uppercase font-bold">Local</span> {selectedCase.city}/{selectedCase.uf}</div>
+                                      <div className="pt-4 border-t border-slate-100">
+                                          <p className="text-slate-600 leading-relaxed">{selectedCase.description}</p>
+                                      </div>
+                                  </div>
+                              </div>
+                              <div className="flex-1">
+                                  {selectedCase.status === 'OPEN' ? (
+                                      <div className="h-full bg-slate-100 rounded-2xl flex items-center justify-center flex-col text-center p-8">
+                                          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+                                          <h3 className="text-xl font-bold text-slate-900">Aguardando Advogado</h3>
+                                          <p className="text-slate-500 max-w-md mt-2">Seu caso está visível para advogados de todo o Brasil. Você será notificado assim que alguém aceitar.</p>
+                                      </div>
+                                  ) : (
+                                      <Chat 
+                                          currentCase={selectedCase} 
+                                          currentUser={currentUser!} 
+                                          otherPartyName={selectedCase.lawyerId ? "Advogado Responsável" : "Advogado"}
+                                      />
+                                  )}
+                              </div>
+                          </div>
+                      </div>
+                  )
+              )}
+
+              {view === 'new-case' && (
+                  <div className="max-w-2xl mx-auto animate-in fade-in duration-500">
+                      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                          <div className="p-8 border-b border-slate-100">
+                              <h2 className="text-2xl font-bold text-slate-900">Novo Caso</h2>
+                              <p className="text-slate-500">Descreva seu problema e nossa IA classificará para você.</p>
+                          </div>
+                          <div className="p-8 space-y-6">
+                              {!analysis ? (
+                                  <>
+                                      <div className="space-y-2">
+                                          <label className="font-bold text-slate-700">Relato do Caso</label>
+                                          <textarea 
+                                              value={description}
+                                              onChange={e => setDescription(e.target.value)}
+                                              className="w-full h-40 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                                              placeholder="Ex: Comprei um produto que veio com defeito e a loja se recusa a trocar..."
+                                          />
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                          <div>
+                                              <label className="font-bold text-slate-700 text-sm">Cidade</label>
+                                              <input type="text" value={city} onChange={e => setCity(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none" />
+                                          </div>
+                                          <div>
+                                              <label className="font-bold text-slate-700 text-sm">UF</label>
+                                              <select value={uf} onChange={e => setUf(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                                                  <option value="">Selecione</option>
+                                                  {BRAZIL_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                              </select>
+                                          </div>
+                                      </div>
+                                      <button 
+                                          onClick={handleAnalyze}
+                                          disabled={isAnalyzing || !description}
+                                          className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center disabled:opacity-50"
+                                      >
+                                          {isAnalyzing ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <Sparkles className="w-5 h-5 mr-2 text-yellow-400" />}
+                                          {isAnalyzing ? 'Analisando com IA...' : 'Analisar Caso'}
+                                      </button>
+                                  </>
+                              ) : (
+                                  <div className="animate-in slide-in-from-bottom-4 duration-500">
+                                      <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mb-6">
+                                          <h3 className="font-bold text-indigo-900 text-lg mb-4 flex items-center"><Sparkles className="w-5 h-5 mr-2 text-indigo-600"/> Análise da IA</h3>
+                                          <div className="space-y-3 text-sm">
+                                              <div className="flex justify-between border-b border-indigo-100 pb-2">
+                                                  <span className="text-indigo-600">Área Sugerida</span>
+                                                  <span className="font-bold text-indigo-900">{analysis.area}</span>
+                                              </div>
+                                              <div className="flex justify-between border-b border-indigo-100 pb-2">
+                                                  <span className="text-indigo-600">Título Profissional</span>
+                                                  <span className="font-bold text-indigo-900">{analysis.title}</span>
+                                              </div>
+                                              <div className="flex justify-between border-b border-indigo-100 pb-2">
+                                                  <span className="text-indigo-600">Complexidade</span>
+                                                  <span className="font-bold text-indigo-900">{analysis.complexity}</span>
+                                              </div>
+                                              <div className="flex justify-between pt-2">
+                                                  <span className="text-indigo-600 font-bold">Taxa de Publicação</span>
+                                                  <span className="font-bold text-indigo-900 text-lg">R$ {calculateCasePrice(analysis.complexity).toFixed(2)}</span>
+                                              </div>
+                                          </div>
+                                      </div>
+                                      <div className="flex space-x-4">
+                                          <button onClick={() => setAnalysis(null)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition">Editar</button>
+                                          <button onClick={handlePublish} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20">
+                                              Confirmar e Publicar
+                                          </button>
+                                      </div>
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              {view === 'profile' && <UserProfile />}
+              {view === 'notifications' && <NotificationList />}
+          </main>
+      </div>
+  );
+};
+
+export const LawyerDashboard: React.FC = () => {
+  const { currentUser, cases, acceptCase, logout, buyJuris, subscribePremium } = useApp();
+  const [view, setView] = useState<ViewType>('dashboard');
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+
+  // Filters for marketplace
+  const [filterArea, setFilterArea] = useState('Todas');
+  
+  const myCases = cases.filter(c => c.lawyerId === currentUser?.id);
+  const openCases = cases.filter(c => c.status === 'OPEN');
+  const selectedCase = cases.find(c => c.id === selectedCaseId);
+
+  const filteredMarket = filterArea === 'Todas' ? openCases : openCases.filter(c => c.area.includes(filterArea));
+  const uniqueAreas = ['Todas', ...Array.from(new Set(openCases.map(c => c.area)))];
+
+  const handleAccept = async (id: string) => {
+      if(confirm('Confirmar o aceite deste caso por 5 Juris?')) {
+          await acceptCase(id);
+          setView('my-cases');
+          setSelectedCaseId(id);
+      }
+  };
+
+  const NavItem = ({ id, icon: Icon, label }: any) => (
+      <button 
+        onClick={() => { setView(id); setSelectedCaseId(null); }}
+        className={`w-full flex items-center space-x-3 px-6 py-3 transition text-sm ${view === id ? 'text-white bg-white/10 border-r-4 border-indigo-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+      >
+          <Icon className="w-4 h-4" />
+          <span className="font-medium">{label}</span>
+      </button>
+  );
+
+  return (
+      <div className="min-h-screen bg-slate-100 flex font-sans">
+          {/* Dark Sidebar for Lawyer */}
+          <aside className="w-64 bg-slate-900 text-white fixed h-full z-20 flex flex-col hidden md:flex">
+              <div className="h-20 flex items-center px-6 border-b border-slate-800">
+                   <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 shadow-lg shadow-indigo-500/30">
+                       <Scale className="w-5 h-5 text-white" />
                    </div>
+                   <span className="font-bold text-lg tracking-tight">SocialJuris <span className="text-indigo-400 text-xs align-top">ADV</span></span>
+              </div>
+              
+              <div className="p-6 pb-2">
+                  <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                      <p className="text-xs text-slate-400 uppercase font-bold mb-1">Seu Saldo</p>
+                      <div className="flex justify-between items-center">
+                          <span className="text-2xl font-bold text-white flex items-center"><Coins className="w-5 h-5 mr-2 text-yellow-500"/> {currentUser?.balance || 0}</span>
+                          <button onClick={() => setView('premium_sales')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2 py-1 rounded font-bold transition">+</button>
+                      </div>
+                  </div>
+              </div>
 
-                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                           <h3 className="font-bold text-slate-900 mb-6 flex items-center"><Activity className="w-5 h-5 mr-2 text-slate-400"/> Atividade Recente</h3>
-                           <div className="space-y-6">
-                               {notifications.slice(0, 4).map(n => (
-                                   <div key={n.id} className="flex items-start space-x-4">
-                                       <div className="w-2 h-2 mt-2 bg-indigo-500 rounded-full"></div>
-                                       <div>
-                                           <p className="text-sm font-medium text-slate-800">{n.message}</p>
-                                           <p className="text-xs text-slate-400 mt-1">{new Date(n.timestamp).toLocaleDateString()}</p>
+              <nav className="flex-1 py-4 space-y-1">
+                  <div className="px-6 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Gestão</div>
+                  <NavItem id="dashboard" icon={Globe} label="Oportunidades" />
+                  <NavItem id="my-cases" icon={Briefcase} label="Meus Processos" />
+                  
+                  <div className="px-6 pt-6 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Ferramentas PRO</div>
+                  <NavItem id="pro_calculator" icon={Calculator} label="Calculadora Forense" />
+                  <NavItem id="pro_strategy" icon={BrainCircuit} label="Estratégia IA" />
+                  <NavItem id="pro_docs" icon={FileSearch} label="Análise Docs" />
+
+                  <div className="px-6 pt-6 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Conta</div>
+                  <NavItem id="profile" icon={UserIcon} label="Perfil Profissional" />
+                  <NavItem id="notifications" icon={Bell} label="Notificações" />
+                  <NavItem id="premium_sales" icon={Award} label="Assinatura Premium" />
+              </nav>
+
+              <div className="p-4 border-t border-slate-800">
+                  <button onClick={logout} className="flex items-center space-x-2 text-slate-400 hover:text-white transition text-sm">
+                      <LogOut className="w-4 h-4" />
+                      <span>Sair da Conta</span>
+                  </button>
+              </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-x-hidden">
+               {/* View Routing */}
+               {view === 'dashboard' && (
+                   <div className="max-w-6xl mx-auto animate-in fade-in duration-500">
+                       <header className="mb-8 flex flex-col md:flex-row justify-between items-end md:items-center">
+                           <div>
+                               <h1 className="text-3xl font-bold text-slate-900">Oportunidades</h1>
+                               <p className="text-slate-500 mt-1">Explore casos recentes publicados por clientes verificados.</p>
+                           </div>
+                           <div className="mt-4 md:mt-0">
+                               <div className="relative">
+                                   <Filter className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                   <select 
+                                     value={filterArea} 
+                                     onChange={(e) => setFilterArea(e.target.value)} 
+                                     className="pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+                                   >
+                                       {uniqueAreas.map(a => <option key={a} value={a}>{a}</option>)}
+                                   </select>
+                               </div>
+                           </div>
+                       </header>
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                           {filteredMarket.length === 0 ? (
+                               <div className="col-span-full text-center py-20">
+                                   <p className="text-slate-500">Nenhuma oportunidade disponível no momento para o filtro selecionado.</p>
+                               </div>
+                           ) : (
+                               filteredMarket.map(c => (
+                                   <div key={c.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col h-full">
+                                       <div className="flex justify-between items-start mb-4">
+                                           <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">{c.area}</span>
+                                           <span className="text-slate-400 text-xs font-semibold">{new Date(c.createdAt).toLocaleDateString()}</span>
+                                       </div>
+                                       <h3 className="text-xl font-bold text-slate-900 mb-2">{c.title}</h3>
+                                       <p className="text-slate-500 text-sm line-clamp-3 mb-6 flex-1">{c.description}</p>
+                                       
+                                       <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
+                                           <div className="flex items-center text-slate-500 text-xs font-bold">
+                                               <MapPin className="w-4 h-4 mr-1" />
+                                               {c.city}/{c.uf}
+                                           </div>
+                                           <button 
+                                              onClick={() => handleAccept(c.id)}
+                                              className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20"
+                                           >
+                                               Aceitar (-5 Juris)
+                                           </button>
+                                       </div>
+                                   </div>
+                               ))
+                           )}
+                       </div>
+                   </div>
+               )}
+
+               {view === 'my-cases' && (
+                   selectedCase ? (
+                       <div className="h-[calc(100vh-6rem)] bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col animate-in slide-in-from-right-4 duration-300">
+                           <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
+                               <div className="flex items-center space-x-4">
+                                   <button onClick={() => setSelectedCaseId(null)} className="p-2 hover:bg-white rounded-full transition"><ChevronRight className="w-5 h-5 rotate-180 text-slate-500" /></button>
+                                   <div>
+                                       <h2 className="font-bold text-slate-900">{selectedCase.title}</h2>
+                                       <div className="flex items-center text-xs text-slate-500 space-x-2">
+                                           <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold uppercase">{selectedCase.status}</span>
+                                           <span>• Cliente ID: {selectedCase.clientId.substring(0,8)}</span>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                           <div className="flex-1 overflow-hidden">
+                               <Chat 
+                                 currentCase={selectedCase} 
+                                 currentUser={currentUser!} 
+                                 otherPartyName="Cliente" 
+                               />
+                           </div>
+                       </div>
+                   ) : (
+                       <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
+                           <h1 className="text-2xl font-bold text-slate-900 mb-6">Meus Processos Ativos</h1>
+                           <div className="space-y-4">
+                               {myCases.map(c => (
+                                   <div key={c.id} onClick={() => setSelectedCaseId(c.id)} className="bg-white p-6 rounded-xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition flex justify-between items-center shadow-sm">
+                                       <div className="flex items-center space-x-4">
+                                           <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-lg">
+                                               {c.title.charAt(0)}
+                                           </div>
+                                           <div>
+                                               <h3 className="font-bold text-slate-900">{c.title}</h3>
+                                               <p className="text-sm text-slate-500 truncate max-w-md">{c.description}</p>
+                                           </div>
+                                       </div>
+                                       <div className="text-right">
+                                           <span className="block text-xs font-bold text-slate-400 uppercase mb-1">Última msg</span>
+                                           <span className="text-sm font-semibold text-slate-700">{c.messages.length > 0 ? new Date(c.messages[c.messages.length-1].timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}</span>
                                        </div>
                                    </div>
                                ))}
+                               {myCases.length === 0 && <p className="text-slate-500 text-center py-12">Você não tem casos ativos.</p>}
                            </div>
                        </div>
-                       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                            <h3 className="font-bold text-slate-900 mb-6 flex items-center"><Search className="w-5 h-5 mr-2 text-slate-400"/> Oportunidades Recomendadas</h3>
-                            <div className="space-y-4">
-                                {openCases.slice(0, 3).map(c => (
-                                    <div key={c.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-indigo-200 transition cursor-pointer" onClick={() => setView('market')}>
-                                        <div>
-                                            <h4 className="font-bold text-slate-900 text-sm">{c.title}</h4>
-                                            <p className="text-xs text-slate-500 mt-1">{c.city} - {c.uf}</p>
-                                        </div>
-                                        <ChevronRight className="w-4 h-4 text-slate-400"/>
-                                    </div>
-                                ))}
-                            </div>
-                       </div>
-                   </div>
-               </div>
-           )}
+                   )
+               )}
 
-           {/* MARKETPLACE */}
-           {view === 'market' && (
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                   {openCases.map(c => (
-                       <div key={c.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition duration-300 group">
-                           <div className="bg-slate-50 p-6 border-b border-slate-100">
-                               <div className="flex justify-between items-start mb-4">
-                                   <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wider">{c.area}</span>
-                                   <span className="text-xs font-bold text-slate-400">{new Date(c.createdAt).toLocaleDateString()}</span>
+               {view === 'pro_calculator' && <LegalCalculator isPremium={currentUser?.isPremium || false} onUnlock={() => setView('premium_sales')} />}
+               {view === 'pro_strategy' && <StrategyAnalyzer isPremium={currentUser?.isPremium || false} onUnlock={() => setView('premium_sales')} />}
+               {view === 'pro_docs' && <FeatureComingSoon title="Análise Documental" icon={FileSearch} desc="Envie PDFs de contratos ou processos e receba resumos automáticos e alertas de cláusulas perigosas." />}
+               
+               {view === 'profile' && <UserProfile />}
+               {view === 'notifications' && <NotificationList />}
+
+               {view === 'premium_sales' && (
+                   <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
+                       <div className="text-center mb-12">
+                           <span className="bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider mb-4 inline-block">Planos e Créditos</span>
+                           <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Potencialize sua Advocacia</h2>
+                           <p className="text-xl text-slate-600 max-w-2xl mx-auto">Adquira créditos para aceitar casos ou assine o plano PRO para ferramentas exclusivas.</p>
+                       </div>
+
+                       <div className="grid md:grid-cols-2 gap-8 mb-16">
+                           {/* Card Créditos */}
+                           <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 flex flex-col">
+                               <div className="mb-6">
+                                   <h3 className="text-2xl font-bold text-slate-900">Pacote de Juris</h3>
+                                   <p className="text-slate-500">Créditos avulsos para aceitar novos casos.</p>
                                </div>
-                               <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 h-14">{c.title}</h3>
-                               <div className="flex items-center text-slate-500 text-sm">
-                                   <MapPin className="w-4 h-4 mr-1"/> {c.city}/{c.uf}
+                               <div className="flex-1 space-y-4">
+                                   {[
+                                       { qtd: 10, price: 50 },
+                                       { qtd: 50, price: 200, save: '20%' },
+                                       { qtd: 100, price: 350, save: '30%' },
+                                   ].map((opt) => (
+                                       <button 
+                                          key={opt.qtd} 
+                                          onClick={() => buyJuris(opt.qtd)}
+                                          className="w-full flex justify-between items-center p-4 rounded-xl border-2 border-slate-100 hover:border-indigo-500 bg-slate-50 hover:bg-white transition group"
+                                       >
+                                           <div className="flex items-center">
+                                               <Coins className="w-5 h-5 text-yellow-500 mr-3" />
+                                               <span className="font-bold text-slate-700">{opt.qtd} Juris</span>
+                                               {opt.save && <span className="ml-2 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">-{opt.save}</span>}
+                                           </div>
+                                           <span className="font-bold text-slate-900">R$ {opt.price}</span>
+                                       </button>
+                                   ))}
                                </div>
                            </div>
-                           <div className="p-6">
-                               <p className="text-slate-600 text-sm line-clamp-3 mb-6 h-16">{c.description}</p>
-                               <div className="flex items-center justify-between">
-                                   <div className="text-xs">
-                                       <span className="block text-slate-400">Complexidade</span>
-                                       <span className="font-bold text-slate-700">{c.complexity || 'Média'}</span>
+
+                           {/* Card PRO */}
+                           <div className="bg-slate-900 text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden flex flex-col">
+                               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600 rounded-full blur-3xl opacity-20 -mr-16 -mt-16"></div>
+                               <div className="relative z-10 mb-6">
+                                   <div className="flex items-center space-x-2 mb-2">
+                                       <Sparkles className="w-6 h-6 text-amber-400" />
+                                       <span className="text-amber-400 font-bold tracking-widest uppercase text-sm">SocialJuris PRO</span>
                                    </div>
-                                   <button 
-                                      onClick={() => acceptCase(c.id)}
-                                      className="bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-800 transition shadow-lg"
-                                    >
-                                       Aceitar (5 Juris)
-                                   </button>
+                                   <h3 className="text-3xl font-bold mb-2">Assinatura Mensal</h3>
+                                   <div className="flex items-baseline space-x-2">
+                                       <span className="text-4xl font-bold">R$ 99</span>
+                                       <span className="text-slate-400">/mês</span>
+                                   </div>
                                </div>
-                           </div>
-                       </div>
-                   ))}
-                   {openCases.length === 0 && (
-                       <div className="col-span-full py-20 text-center">
-                           <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                               <Search className="w-10 h-10 text-slate-300"/>
-                           </div>
-                           <h3 className="text-xl font-bold text-slate-900">Sem casos disponíveis no momento</h3>
-                           <p className="text-slate-500">Aguarde novas publicações de clientes.</p>
-                       </div>
-                   )}
-               </div>
-           )}
-
-           {/* MY CASES */}
-           {view === 'my-cases' && (
-               <div className="space-y-4 animate-in fade-in duration-500">
-                   {myActiveCases.map(c => (
-                       <div key={c.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between hover:border-indigo-300 transition group">
-                           <div className="flex-1 mb-4 md:mb-0">
-                               <div className="flex items-center space-x-3 mb-2">
-                                   <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                                   <h3 className="font-bold text-slate-900 text-lg">{c.title}</h3>
-                               </div>
-                               <p className="text-slate-500 text-sm mb-2">{c.description.substring(0, 100)}...</p>
-                               <div className="flex space-x-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                   <span>{c.area}</span>
-                                   <span>•</span>
-                                   <span>{c.city}</span>
-                               </div>
-                           </div>
-                           <div className="flex items-center space-x-4">
-                               <button onClick={() => setSelectedCase(c)} className="bg-indigo-50 text-indigo-700 px-6 py-3 rounded-xl font-bold hover:bg-indigo-100 transition flex items-center">
-                                   <MessageSquare className="w-4 h-4 mr-2"/> Abrir Chat
+                               <ul className="space-y-4 mb-8 flex-1 relative z-10">
+                                   <li className="flex items-start"><Check className="w-5 h-5 text-green-400 mr-3 mt-0.5"/> <span>Acesso ilimitado à <strong>Calculadora Forense</strong></span></li>
+                                   <li className="flex items-start"><Check className="w-5 h-5 text-green-400 mr-3 mt-0.5"/> <span><strong>Opositor IA:</strong> Análise estratégica de peças</span></li>
+                                   <li className="flex items-start"><Check className="w-5 h-5 text-green-400 mr-3 mt-0.5"/> <span>Bônus mensal de <strong>20 Juris</strong></span></li>
+                                   <li className="flex items-start"><Check className="w-5 h-5 text-green-400 mr-3 mt-0.5"/> <span>Selo de Advogado Verificado PRO</span></li>
+                               </ul>
+                               <button 
+                                  onClick={subscribePremium}
+                                  disabled={currentUser?.isPremium}
+                                  className={`w-full py-4 rounded-xl font-bold transition shadow-lg relative z-10 ${currentUser?.isPremium ? 'bg-green-600 text-white cursor-default' : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white'}`}
+                               >
+                                   {currentUser?.isPremium ? 'Você já é PRO' : 'Assinar Agora'}
                                </button>
                            </div>
                        </div>
-                   ))}
-               </div>
-           )}
-
-           {/* PREMIUM SALES PAGE */}
-           {view === 'premium_sales' && (
-               <div className="max-w-4xl mx-auto text-center animate-in zoom-in duration-300">
-                   <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Potencialize sua Advocacia</h2>
-                   <p className="text-xl text-slate-500 mb-12">Escolha o pacote ideal para captar mais clientes e usar ferramentas de IA.</p>
-                   
-                   <div className="grid md:grid-cols-2 gap-8 text-left">
-                       {/* JURIS PACK */}
-                       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition relative overflow-hidden">
-                           <div className="absolute top-0 right-0 p-4 opacity-10"><Coins className="w-32 h-32"/></div>
-                           <h3 className="text-2xl font-bold text-slate-900 mb-2">Pacote de Créditos</h3>
-                           <p className="text-slate-500 mb-6">Compre "Juris" avulsos para aceitar casos específicos.</p>
-                           <div className="text-4xl font-extrabold text-slate-900 mb-8">R$ 50,00 <span className="text-sm font-medium text-slate-400">/ 50 Juris</span></div>
-                           <ul className="space-y-4 mb-8">
-                               <li className="flex items-center text-slate-700"><Check className="w-5 h-5 text-green-500 mr-3"/> Aceite até 10 casos</li>
-                               <li className="flex items-center text-slate-700"><Check className="w-5 h-5 text-green-500 mr-3"/> Sem validade de expiração</li>
-                           </ul>
-                           <button onClick={() => buyJuris(50)} className="w-full py-4 rounded-xl font-bold bg-slate-100 text-slate-900 hover:bg-slate-200 transition">Comprar Créditos</button>
-                       </div>
-
-                       {/* PRO SUBSCRIPTION */}
-                       <div className="bg-slate-900 p-8 rounded-3xl shadow-2xl text-white relative overflow-hidden transform md:scale-105 border-2 border-indigo-500">
-                           <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-400 to-orange-500 text-xs font-bold px-3 py-1 rounded-full text-black">MAIS VENDIDO</div>
-                           <h3 className="text-2xl font-bold mb-2">SocialJuris PRO</h3>
-                           <p className="text-slate-400 mb-6">Acesso ilimitado às ferramentas de IA e destaque.</p>
-                           <div className="text-4xl font-extrabold mb-8">R$ 69,90 <span className="text-sm font-medium text-slate-500">/ mês</span></div>
-                           
-                           {/* FEATURE GRID */}
-                           <div className="grid grid-cols-2 gap-4 mb-8">
-                                <div className="bg-white/10 p-3 rounded-lg flex items-start">
-                                    <BrainCircuit className="w-5 h-5 text-indigo-400 mr-2 mt-0.5"/>
-                                    <div>
-                                        <p className="text-sm font-bold">Opositor IA</p>
-                                        <p className="text-[10px] text-slate-400">Análise de falhas processuais</p>
-                                    </div>
-                                </div>
-                                <div className="bg-white/10 p-3 rounded-lg flex items-start">
-                                    <Calculator className="w-5 h-5 text-indigo-400 mr-2 mt-0.5"/>
-                                    <div>
-                                        <p className="text-sm font-bold">Calculadora</p>
-                                        <p className="text-[10px] text-slate-400">Atualização Monetária Visual</p>
-                                    </div>
-                                </div>
-                                <div className="bg-white/10 p-3 rounded-lg flex items-start">
-                                    <FileText className="w-5 h-5 text-indigo-400 mr-2 mt-0.5"/>
-                                    <div>
-                                        <p className="text-sm font-bold">Redator</p>
-                                        <p className="text-[10px] text-slate-400">Geração de Petições</p>
-                                    </div>
-                                </div>
-                                <div className="bg-amber-500/20 p-3 rounded-lg flex items-start border border-amber-500/50">
-                                    <Coins className="w-5 h-5 text-amber-400 mr-2 mt-0.5"/>
-                                    <div>
-                                        <p className="text-sm font-bold text-amber-400">Bônus Mensal</p>
-                                        <p className="text-[10px] text-amber-200">+20 Juris todo mês</p>
-                                    </div>
-                                </div>
-                                <div className="col-span-2 bg-teal-500/20 p-3 rounded-lg flex items-start border border-teal-500/50">
-                                    <BarChart3 className="w-5 h-5 text-teal-400 mr-2 mt-0.5"/>
-                                    <div>
-                                        <p className="text-sm font-bold text-teal-400">Analytics Jurídico</p>
-                                        <p className="text-[10px] text-teal-200">Análise de dados de todas as ferramentas</p>
-                                    </div>
-                                </div>
-                           </div>
-
-                           <button onClick={subscribePremium} className="w-full py-4 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/50">
-                               {currentUser?.isPremium ? 'Plano Ativo' : 'Assinar Agora'}
-                           </button>
-                       </div>
                    </div>
-               </div>
-           )}
-
-           {/* PRO TOOLS VIEWS */}
-           {view === 'pro_analytics' && <FeatureComingSoon title="Analytics Jurídico" icon={BarChart3} desc="Painel de inteligência de dados que cruza informações dos seus casos, cálculos e teses para otimizar sua performance." />}
-           {view === 'pro_strategy' && <StrategyAnalyzer isPremium={currentUser?.isPremium || false} onUnlock={() => setView('premium_sales')} />}
-           {view === 'pro_calculator' && <LegalCalculator isPremium={currentUser?.isPremium || false} onUnlock={() => setView('premium_sales')} />}
-           {view === 'pro_writer' && <FeatureComingSoon title="Redator Automático" icon={FileText} desc="Gere petições completas baseadas nos fatos do caso usando nossa IA generativa avançada." />}
-           {view === 'pro_docs' && <FeatureComingSoon title="Gestão Inteligente" icon={Folders} desc="Organize documentos, contratos e provas com indexação automática e busca semântica." />}
-
-           {view === 'profile' && <UserProfile />}
-           {view === 'notifications' && <NotificationList />}
-
-       </main>
-    </div>
+               )}
+          </main>
+      </div>
   );
 };
 
 export const AdminDashboard: React.FC = () => {
     const { users, verifyLawyer, logout } = useApp();
     const pendingLawyers = users.filter(u => u.role === UserRole.LAWYER && !u.verified);
-    const [selectedLawyer, setSelectedLawyer] = useState<User | null>(null);
 
     return (
-        <div className="min-h-screen bg-slate-100 p-8 font-sans relative">
-            {/* SIDE DRAWER FOR LAWYER DETAILS */}
-            <div className={`fixed top-0 right-0 h-full w-96 bg-white shadow-2xl z-30 transform transition-transform duration-300 ease-in-out ${selectedLawyer ? 'translate-x-0' : 'translate-x-full'} overflow-y-auto`}>
-                 {selectedLawyer && (
-                     <div className="flex flex-col h-full">
-                         <div className="bg-slate-900 text-white p-6 relative">
-                             <button onClick={() => setSelectedLawyer(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X className="w-6 h-6"/></button>
-                             <div className="w-20 h-20 bg-white rounded-full p-1 mb-4">
-                                 <img src={selectedLawyer.avatar} className="w-full h-full rounded-full object-cover"/>
-                             </div>
-                             <h2 className="text-xl font-bold">{selectedLawyer.name}</h2>
-                             <p className="text-slate-400 text-sm">Candidato a Advogado</p>
-                         </div>
-                         <div className="p-6 flex-1 space-y-6">
-                             <div>
-                                 <p className="text-xs font-bold text-slate-500 uppercase mb-1">Informações de Contato</p>
-                                 <p className="flex items-center text-slate-700 mb-1"><Mail className="w-4 h-4 mr-2"/> {selectedLawyer.email}</p>
-                                 <p className="flex items-center text-slate-700"><Phone className="w-4 h-4 mr-2"/> {selectedLawyer.phone || 'Não informado'}</p>
-                             </div>
-                             <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                                 <p className="text-xs font-bold text-indigo-800 uppercase mb-2 flex items-center"><Shield className="w-4 h-4 mr-1"/> Dados Profissionais</p>
-                                 <div className="mb-2">
-                                     <span className="text-sm text-slate-500 block">Número OAB</span>
-                                     <span className="font-mono font-bold text-lg text-slate-900">{selectedLawyer.oab || 'PENDENTE'}</span>
-                                 </div>
-                                 <div>
-                                     <span className="text-sm text-slate-500 block">Data de Registro</span>
-                                     <span className="text-slate-900">{new Date(selectedLawyer.createdAt).toLocaleDateString()}</span>
-                                 </div>
-                             </div>
-                             <div>
-                                 <p className="text-xs font-bold text-slate-500 uppercase mb-1">Biografia / Resumo</p>
-                                 <p className="text-slate-600 text-sm italic p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                     "{selectedLawyer.bio || 'O advogado não forneceu uma biografia no momento do cadastro.'}"
-                                 </p>
-                             </div>
-                         </div>
-                         <div className="p-6 border-t border-slate-200 bg-slate-50 sticky bottom-0">
-                             <div className="grid grid-cols-2 gap-4">
-                                 <button onClick={() => setSelectedLawyer(null)} className="px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition">Recusar</button>
-                                 <button onClick={() => { verifyLawyer(selectedLawyer.id); setSelectedLawyer(null); }} className="px-4 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-600/20">Aprovar Cadastro</button>
-                             </div>
-                         </div>
+        <div className="min-h-screen bg-slate-100 font-sans">
+             <header className="bg-slate-900 text-white h-16 flex items-center px-8 justify-between shadow-md">
+                 <div className="flex items-center space-x-3">
+                     <Shield className="w-6 h-6 text-red-500" />
+                     <span className="font-bold text-lg">Painel Administrativo</span>
+                 </div>
+                 <button onClick={logout} className="text-sm font-bold text-slate-400 hover:text-white">Sair</button>
+             </header>
+             
+             <main className="max-w-6xl mx-auto p-8">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                     <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-500">
+                         <div className="text-slate-500 font-bold uppercase text-xs">Total Usuários</div>
+                         <div className="text-3xl font-bold text-slate-900">{users.length}</div>
                      </div>
-                 )}
-            </div>
-            
-            {/* OVERLAY BACKDROP */}
-            {selectedLawyer && <div className="fixed inset-0 bg-black/20 z-20" onClick={() => setSelectedLawyer(null)}></div>}
+                     <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
+                         <div className="text-slate-500 font-bold uppercase text-xs">Pendentes de Verificação</div>
+                         <div className="text-3xl font-bold text-slate-900">{pendingLawyers.length}</div>
+                     </div>
+                     <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                         <div className="text-slate-500 font-bold uppercase text-xs">Advogados Verificados</div>
+                         <div className="text-3xl font-bold text-slate-900">{users.filter(u => u.role === UserRole.LAWYER && u.verified).length}</div>
+                     </div>
+                 </div>
 
-            <div className="max-w-6xl mx-auto">
-                <header className="flex justify-between items-center mb-12">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900">Painel Administrativo</h1>
-                        <p className="text-slate-500">Gestão de plataforma e verificação de profissionais</p>
-                    </div>
-                    <button onClick={logout} className="bg-white text-red-500 px-4 py-2 rounded-lg font-bold border border-red-100 hover:bg-red-50 transition">Sair do Sistema</button>
-                </header>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <p className="text-slate-500 text-xs font-bold uppercase mb-2">Total de Usuários</p>
-                        <h3 className="text-4xl font-bold text-slate-900">{users.length}</h3>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <p className="text-slate-500 text-xs font-bold uppercase mb-2">Advogados Pendentes</p>
-                        <h3 className="text-4xl font-bold text-amber-500">{pendingLawyers.length}</h3>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <p className="text-slate-500 text-xs font-bold uppercase mb-2">Receita Mensal (Est.)</p>
-                        <h3 className="text-4xl font-bold text-green-600">R$ 12.450</h3>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-6 border-b border-slate-100">
-                        <h2 className="text-xl font-bold text-slate-900">Solicitações de Verificação</h2>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                        {pendingLawyers.length === 0 ? (
-                            <div className="p-12 text-center text-slate-500">
-                                Nenhuma solicitação pendente.
-                            </div>
-                        ) : (
-                            pendingLawyers.map(user => (
-                                <div key={user.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer" onClick={() => setSelectedLawyer(user)}>
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-bold text-lg">
-                                            {user.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-slate-900">{user.name}</h3>
-                                            <p className="text-slate-500 text-sm">{user.email}</p>
-                                            <div className="flex items-center mt-1 space-x-2">
-                                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-mono">OAB: {user.oab || 'Não informada'}</span>
-                                                <span className="text-xs text-slate-400">Cadastrado em {new Date(user.createdAt).toLocaleDateString()}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center text-indigo-600 text-sm font-bold">
-                                        Ver Detalhes <ChevronRight className="w-4 h-4 ml-1"/>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </div>
+                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                     <div className="p-6 border-b border-slate-100">
+                         <h2 className="text-xl font-bold text-slate-900">Solicitações de Verificação</h2>
+                     </div>
+                     <div className="overflow-x-auto">
+                         <table className="w-full text-left">
+                             <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                                 <tr>
+                                     <th className="px-6 py-4">Advogado</th>
+                                     <th className="px-6 py-4">OAB</th>
+                                     <th className="px-6 py-4">Email</th>
+                                     <th className="px-6 py-4 text-right">Ação</th>
+                                 </tr>
+                             </thead>
+                             <tbody className="divide-y divide-slate-100">
+                                 {pendingLawyers.map(user => (
+                                     <tr key={user.id} className="hover:bg-slate-50">
+                                         <td className="px-6 py-4 font-bold text-slate-900 flex items-center">
+                                             <img src={user.avatar} className="w-8 h-8 rounded-full mr-3" alt=""/>
+                                             {user.name}
+                                         </td>
+                                         <td className="px-6 py-4 text-slate-600">{user.oab}</td>
+                                         <td className="px-6 py-4 text-slate-600">{user.email}</td>
+                                         <td className="px-6 py-4 text-right">
+                                             <button 
+                                                onClick={() => verifyLawyer(user.id)}
+                                                className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg text-xs font-bold transition uppercase"
+                                             >
+                                                 Aprovar Cadastro
+                                             </button>
+                                         </td>
+                                     </tr>
+                                 ))}
+                                 {pendingLawyers.length === 0 && (
+                                     <tr>
+                                         <td colSpan={4} className="px-6 py-12 text-center text-slate-500">Nenhuma solicitação pendente.</td>
+                                     </tr>
+                                 )}
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+             </main>
         </div>
     );
 };
-
-function Star(props: any) {
-    return (
-        <svg 
-          {...props} 
-          xmlns="http://www.w3.org/2000/svg" 
-          width="24" 
-          height="24" 
-          viewBox="0 0 24 24" 
-          fill="currentColor" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-        >
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-    );
-}
-
-function Files(props: any) {
-  return (
-    <svg 
-      {...props} 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  )
-}
